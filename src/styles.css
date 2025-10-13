@@ -81,3 +81,16 @@ h2{font-size:18px; margin:16px 0 8px}
   padding:10px 12px; border-radius:10px; box-shadow: var(--shadow) }
 .toast.ok{ border-left-color: var(--ok) }
 .toast.error{ border-left-color: var(--error) }
+
+.tabs-bar{
+  display:flex; gap:8px; border-bottom:1px solid #1e293b; margin:0 0 12px; padding-bottom:8px;
+}
+.tab{
+  background:transparent; color:#cbd5e1; border:1px solid #253149; border-bottom:none;
+  padding:8px 12px; border-top-left-radius:10px; border-top-right-radius:10px; cursor:pointer;
+}
+.tab.active{
+  background:#0b1223; color:#fff; border-color:#38bdf8; box-shadow: var(--shadow);
+}
+.tab:not(.active):hover{ border-color:#334155 }
+
