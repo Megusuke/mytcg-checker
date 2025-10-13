@@ -11,8 +11,8 @@ export interface Card {
   life: string;
   power: string;
   effect: string;
-  attribute: string;
-  blockicon: string;
+  attribute?: string;
+  blockicon?: string;
 }
 
 export interface Ownership {
