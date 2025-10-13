@@ -1,4 +1,3 @@
-import React from 'react'
 import { ImportZip } from './features/importZip/ImportZip'
 import { ImportCsv } from './features/importCsv/ImportCsv'
 import { CardsList } from './features/cards/CardsList'

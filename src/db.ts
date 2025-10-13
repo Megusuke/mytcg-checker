@@ -40,7 +40,6 @@ export function getDB() {
 }
 
 // === Bulk ops & ownership helpers ===
-import type { IDBPDatabase } from 'idb'
 
 export async function putCards(cards: Card[]) {
   const db = await getDB()

@@ -8,22 +8,26 @@ export const ImportCsv: React.FC = () => {
   const [count, setCount] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  function S(v: unknown): string {
+    return (v ?? '').toString().trim()
+  }
+
   function mapRow(row: any): Card {
     return {
-      cardId: String(row.cardId ?? '').trim(),
-      name: String(row.name ?? '').trim(),
-      number: String(row.number ?? '').trim(),
-      rarity: String(row.rarity ?? '').trim(),
-      color: String(row.color ?? '').trim(),
-      kind: String(row.kind ?? '').trim(),
-      type: String(row.type ?? '').trim(),
-      cost: String(row.cost ?? '').trim(),
-      counter: String(row.counter ?? '').trim(),
-      life: String(row.life ?? '').trim(),
-      power: String(row.power ?? '').trim(),
-      effect: String(row.effect ?? '').trim(),
-      attribute: row.attribute ? String(row.attribute).trim() : undefined,
-      blockicon: row.blockicon ? String(row.blockicon).trim() : undefined,
+      cardId: S(row.cardId),
+      name:   S(row.name),
+      number: S(row.number),
+      rarity: S(row.rarity),
+      color:  S(row.color),
+      kind:   S(row.kind),
+      type:   S(row.type),
+      cost:   S(row.cost),
+      counter:S(row.counter),
+      life:   S(row.life),
+      power:  S(row.power),
+      effect: S(row.effect),
+      attribute: row.attribute ? S(row.attribute) : undefined,
+      blockicon: row.blockicon ? S(row.blockicon) : undefined,
     }
   }
 
