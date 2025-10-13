@@ -14,24 +14,23 @@ export const ImportCsv: React.FC = () => {
   const inputRef = useRef<HTMLInputElement>(null)
   const toast = useToast()
   
-  function mapRow(row: any): Card {
-    return {
-      cardId: S(row.cardId),
-      name:   S(row.name),
-      number: S(row.number),
-      rarity: S(row.rarity),
-      color:  S(row.color),
-      kind:   S(row.kind),
-      type:   S(row.type),
-      cost:   S(row.cost),
-      counter:S(row.counter),
-      life:   S(row.life),
-      power:  S(row.power),
-      effect: S(row.effect),
-      attribute: row.attribute ? S(row.attribute) : undefined,
-      blockicon: row.blockicon ? S(row.blockicon) : undefined,
-    }
+function mapRow(row: any): Card {
+  return {
+    cardId:   S(row.cardId),     // 例: OP01-001
+    name:     S(row.name),
+    rarity:   S(row.rarity),
+    color:    S(row.color),
+    kind:     S(row.kind),
+    type:     S(row.type),
+    cost:     S(row.cost),
+    counter:  S(row.counter),
+    life:     S(row.life),
+    power:    S(row.power),
+    effect:   S(row.effect),
+    attribute: row.attribute ? S(row.attribute) : undefined,
+    blockicon: row.blockicon ? S(row.blockicon) : undefined,
   }
+}
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const inputEl = e.currentTarget

@@ -1,24 +1,52 @@
-import React, { useEffect, useState } from 'react'
+// src/components/CardThumb.tsx
+import { useEffect, useState } from 'react'
 import { getDB } from '../db'
 
-export const CardThumb: React.FC<{ cardId: string; size?: number }> = ({ cardId, size = 120 }) => {
+export function CardThumb({ cardId, width = '100%' }: { cardId: string; width?: number | string }) {
   const [url, setUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let objUrl: string | null = null
-    getDB().then(async db => {
-      const blob = await db.get('images', `image-thumb:${cardId}`)
-      if (blob) {
+    let mounted = true
+    ;(async () => {
+      const db = await getDB()
+      const blob =
+        (await db.get('images', `image-thumb:${cardId}`)) ||
+        (await db.get('images', `image-original:${cardId}`))
+      if (blob && mounted) {
         objUrl = URL.createObjectURL(blob)
         setUrl(objUrl)
       }
-    })
-    return () => { if (objUrl) URL.revokeObjectURL(objUrl) }
+    })()
+    return () => {
+      mounted = false
+      if (objUrl) URL.revokeObjectURL(objUrl)
+    }
   }, [cardId])
 
-  return url
-  ? <img src={url} loading="lazy" alt={cardId} width={size} height={size}
-         style={{objectFit:'cover', borderRadius:8}}/>
-  : <div style={{width:size, height:size, background:'#0b1223', border:'1px solid #1e293b', borderRadius:8}}/>
-
+  return (
+    <div
+      style={{
+        width,                 // ← 親から受けた幅でフィット
+        aspectRatio: '63 / 88',
+        background: '#0b1223',
+        border: '1px solid #1e293b',
+        borderRadius: 8,
+        display: 'grid',
+        placeItems: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {url ? (
+        <img
+          src={url}
+          alt={cardId}
+          loading="lazy"
+          style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }}
+        />
+      ) : (
+        <div style={{opacity:.4, fontSize:12, color:'#94a3b8'}}>No Image</div>
+      )}
+    </div>
+  )
 }

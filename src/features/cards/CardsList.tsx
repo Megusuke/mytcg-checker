@@ -2,21 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Card } from '../../models'
 import { getAllCards, getOwnership, setOwnership } from '../../db'
 import { CardThumb } from '../../components/CardThumb'
-import { ImageModal } from '../../components/ImageModal'
 
-type SortKey = 'name' | 'number' | 'rarity' | 'color'
+function getSetId(cardId: string) {
+  const m = cardId.match(/^[^-_]+/)
+  return m ? m[0] : 'UNKNOWN'
+}
 
 export const CardsList: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
-  const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [ownCache, setOwnCache] = useState<Record<string, number>>({})
-  const [filterColor, setFilterColor] = useState<string>('ALL')
-  const [filterRarity, setFilterRarity] = useState<string>('ALL')
-  const [sortKey, setSortKey] = useState<SortKey>('number')
-  const [sortAsc, setSortAsc] = useState<boolean>(true)
-  const [onlyOwned, setOnlyOwned] = useState<boolean>(false)
-  const [previewId, setPreviewId] = useState<string | null>(null)
+  const [ownReady, setOwnReady] = useState(false)
+
+  // 絞り込み：検索語 / セット / 未所持のみ（デフォルトON）
+  const [q, setQ] = useState('')
+  const [setFilter, setSetFilter] = useState<string>('ALL')
+  const [onlyUnowned, setOnlyUnowned] = useState<boolean>(true)
 
   useEffect(() => {
     setBusy(true)
@@ -26,60 +27,54 @@ export const CardsList: React.FC = () => {
     })
   }, [])
 
+  // 所持キャッシュ
   useEffect(() => {
-    (async () => {
-      const copy: Record<string, number> = {}
+    ;(async () => {
+      setOwnReady(false)
+      const map: Record<string, number> = {}
       for (const c of cards) {
         const ow = await getOwnership(c.cardId)
-        if (ow) copy[c.cardId] = ow.count
+        if (ow) map[c.cardId] = ow.count
       }
-      setOwnCache(copy)
+      setOwnCache(map)
+      setOwnReady(true)
     })()
   }, [cards])
 
-  const colorOptions = useMemo(
-    () => ['ALL', ...Array.from(new Set(cards.map(c => c.color).filter(Boolean))).sort()],
-    [cards]
-  )
-  const rarityOptions = useMemo(
-    () => ['ALL', ...Array.from(new Set(cards.map(c => c.rarity).filter(Boolean))).sort()],
-    [cards]
-  )
+  // セット候補
+  const setOptions = useMemo(() => {
+    const uniq = new Set<string>()
+    for (const c of cards) uniq.add(getSetId(c.cardId))
+    return ['ALL', ...Array.from(uniq).sort()]
+  }, [cards])
 
+  // 絞り込み
   const filtered = useMemo(() => {
     const key = q.trim().toLowerCase()
     let list = cards
-
     if (key) {
       list = list.filter(c =>
         (c.name ?? '').toLowerCase().includes(key) ||
-        (c.number ?? '').toLowerCase().includes(key) ||
+        (c.cardId ?? '').toLowerCase().includes(key) ||
         (c.type ?? '').toLowerCase().includes(key) ||
         (c.effect ?? '').toLowerCase().includes(key)
       )
     }
-    if (filterColor !== 'ALL') list = list.filter(c => c.color === filterColor)
-    if (filterRarity !== 'ALL') list = list.filter(c => c.rarity === filterRarity)
-    if (onlyOwned) list = list.filter(c => (ownCache[c.cardId] ?? 0) > 0)
+    if (setFilter !== 'ALL') list = list.filter(c => getSetId(c.cardId) === setFilter)
+    if (onlyUnowned && ownReady) list = list.filter(c => (ownCache[c.cardId] ?? 0) === 0)
 
-    const mul = sortAsc ? 1 : -1
-    return [...list].sort((a, b) => {
-      const av = String(a[sortKey] ?? '')
-      const bv = String(b[sortKey] ?? '')
-      return av.localeCompare(bv, 'ja') * mul
-    })
-  }, [cards, q, filterColor, filterRarity, sortKey, sortAsc, onlyOwned, ownCache])
+    return [...list].sort((a, b) => String(a.cardId).localeCompare(String(b.cardId), 'ja'))
+  }, [cards, q, setFilter, onlyUnowned, ownCache, ownReady])
 
-  async function changeCount(cardId: string, next: number) {
-    if (next < 0) next = 0
-    await setOwnership(cardId, next)
-    setOwnCache(prev => ({ ...prev, [cardId]: next }))
+  // 所持変更
+  async function setCount(cardId: string, next: number) {
+    const safe = Math.max(0, Math.floor(next || 0))
+    await setOwnership(cardId, safe)
+    setOwnCache(prev => ({ ...prev, [cardId]: safe }))
   }
-
   async function toggleOwned(cardId: string) {
     const cur = ownCache[cardId] ?? 0
-    const next = cur > 0 ? 0 : 1
-    await changeCount(cardId, next)
+    await setCount(cardId, cur > 0 ? 0 : 1)
   }
 
   const ownedKinds = Object.values(ownCache).filter(n => (n ?? 0) > 0).length
@@ -87,117 +82,73 @@ export const CardsList: React.FC = () => {
 
   return (
     <section>
-      <h2>カード一覧（{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
+      <h2>カード検索 / 所持チェック（{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
 
-      {/* ← ここがレスポンシブ対応のツールバー */}
+      {/* 絞り込み（検索・セット・未所持のみ） */}
       <div className="toolbar grid toolbar-grid">
         <input
           className="input"
-          placeholder="検索（名前/番号/タイプ/効果）"
+          placeholder="検索（名前/番号/特徴/効果）"
           value={q}
           onChange={e => setQ(e.target.value)}
         />
-        <select className="select" value={filterColor} onChange={e => setFilterColor(e.target.value)}>
-          {colorOptions.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
+        <select className="select" value={setFilter} onChange={e => setSetFilter(e.target.value)}>
+          {setOptions.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select className="select" value={filterRarity} onChange={e => setFilterRarity(e.target.value)}>
-          {rarityOptions.map(r => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-        <select className="select" value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)}>
-          <option value="number">番号</option>
-          <option value="name">名前</option>
-          <option value="rarity">レアリティ</option>
-          <option value="color">色</option>
-        </select>
-        <button className="btn ghost" onClick={() => setSortAsc(s => !s)}>
-          {sortAsc ? '昇順' : '降順'}
-        </button>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginTop: 8 }}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <label style={{display:'inline-flex', alignItems:'center', gap:6}}>
           <input
             type="checkbox"
-            checked={onlyOwned}
-            onChange={e => setOnlyOwned(e.target.checked)}
+            checked={onlyUnowned}
+            onChange={e => setOnlyUnowned(e.target.checked)}
           />
-          所持のみ
+          未所持のみ
         </label>
-        <button
-          className="btn neutral"
-          onClick={() => {
-            setFilterColor('ALL')
-            setFilterRarity('ALL')
-            setQ('')
-            setOnlyOwned(false)
-          }}
-        >
-          絞り込みリセット
-        </button>
+        <div></div>
       </div>
 
-      {/* ← ここがカードのレスポンシブグリッド */}
+      {busy && <div style={{ marginTop: 8 }}>読み込み中...</div>}
+      {!busy && !cards.length && <div style={{ marginTop: 8 }}>カードがありません。CSVを取り込んでください。</div>}
+
+      {/* 画像フル幅＋下にコントロール（左右の余白なし） */}
       <div className="cards-grid">
         {filtered.map(card => {
           const cnt = ownCache[card.cardId] ?? 0
           const owned = cnt > 0
           return (
-            <div key={card.cardId} className={`card ${owned ? 'owned' : ''}`}>
-              <div style={{ position: 'relative' }}>
+            <div key={card.cardId} className={`card tight ${owned ? 'owned' : ''}`} style={{gridTemplateColumns:'1fr'}}>
+              <div className="thumb-box">
+                <CardThumb cardId={card.cardId} width="100%" />
+              </div>
+              <div
+                className="controls"
+                style={{
+                  display:'grid',
+                  gridTemplateColumns:'auto auto auto 1fr',
+                  alignItems:'center',
+                  gap:8
+                }}
+              >
+                <button className="btn ghost" onClick={() => setCount(card.cardId, cnt - 1)} aria-label="減らす">-</button>
+                <input
+                  className="input input--num"
+                  type="number"
+                  min={0}
+                  max={99}
+                  inputMode="numeric"
+                  value={cnt}
+                  onChange={e => setCount(card.cardId, Number(e.target.value))}
+                  aria-label="所持枚数"
+                />
+                <button className="btn ghost" onClick={() => setCount(card.cardId, cnt + 1)} aria-label="増やす">+</button>
                 <button
-                  onClick={() => setPreviewId(card.cardId)}
-                  style={{ all: 'unset', cursor: 'zoom-in', display: 'block', lineHeight: 0 }}
-                  aria-label="原本画像を拡大"
-                  title="原本画像を拡大"
-                >
-                  <CardThumb cardId={card.cardId} size={96} />
-                </button>
-                <button
-                  title="クイック所持トグル"
+                  className={`btn ${owned ? 'ok' : 'neutral'}`}
                   onClick={() => toggleOwned(card.cardId)}
-                  className="btn"
-                  style={{ position: 'absolute', right: 4, bottom: 4, padding: '2px 6px', fontSize: 12 }}
+                  aria-pressed={owned}
+                  aria-label="所持トグル"
+                  style={{ whiteSpace:'nowrap' }}
                 >
                   {owned ? '所持✓' : '未所持'}
                 </button>
-              </div>
-
-              <div style={{ display: 'grid', gap: 4 }}>
-                <div style={{ fontWeight: 600 }}>
-                  {card.name} <small>({card.cardId})</small>
-                </div>
-                <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                  #{card.number} / {card.rarity} / {card.color} / {card.kind}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#cbd5e1',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}
-                  title={card.effect}
-                >
-                  {card.effect}
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                  <button className="btn ghost" onClick={() => changeCount(card.cardId, cnt - 1)}>-</button>
-                  <input
-                    className="input"
-                    type="number"
-                    min={0}
-                    value={cnt}
-                    onChange={e => changeCount(card.cardId, Number(e.target.value))}
-                    style={{ width: 80, textAlign: 'center' }}
-                  />
-                  <button className="btn ghost" onClick={() => changeCount(card.cardId, cnt + 1)}>+</button>
-                </div>
               </div>
             </div>
           )
@@ -207,14 +158,6 @@ export const CardsList: React.FC = () => {
       <div style={{ marginTop: 12 }}>
         <div className="progress"><div className="fill" style={{ width: `${progress}%` }} /></div>
       </div>
-
-      {previewId && (
-        <ImageModal
-          cardId={previewId}
-          title={cards.find(c => c.cardId === previewId)?.name ?? previewId}
-          onClose={() => setPreviewId(null)}
-        />
-      )}
     </section>
   )
 }
