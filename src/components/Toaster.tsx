@@ -1,23 +1,33 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
-type Toast = { id:number; text:string; type?:'ok'|'error' }
-const Ctx = createContext<(t: Omit<Toast,'id'>)=>void>(()=>{})
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react'
 
-export function useToast(){ return useContext(Ctx) }
+type Toast = { id: number; text: string; type?: 'ok' | 'error' }
+type PushToast = (t: Omit<Toast, 'id'>) => void
 
-export const Toaster: React.FC = ({ children }) => {
+const Ctx = createContext<PushToast>(() => {})
+
+export function useToast(): PushToast {
+  return useContext(Ctx)
+}
+
+export function Toaster({ children }: { children?: ReactNode }) {
   const [list, setList] = useState<Toast[]>([])
   const idRef = useRef(1)
-  const push = (t: Omit<Toast,'id'>) => {
+
+  const push: PushToast = (t) => {
     const id = idRef.current++
-    setList(prev => [...prev, { id, ...t }])
-    setTimeout(()=> setList(prev => prev.filter(x=>x.id!==id)), 3500)
+    setList((prev) => [...prev, { id, ...t }])
+    // 3.5秒で自動消滅
+    setTimeout(() => setList((prev) => prev.filter((x) => x.id !== id)), 3500)
   }
+
   return (
     <Ctx.Provider value={push}>
       {children}
       <div className="toast-wrap">
-        {list.map(t=>(
-          <div key={t.id} className={`toast ${t.type ?? ''}`}>{t.text}</div>
+        {list.map((t) => (
+          <div key={t.id} className={`toast ${t.type ?? ''}`}>
+            {t.text}
+          </div>
         ))}
       </div>
     </Ctx.Provider>
