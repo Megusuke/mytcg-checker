@@ -49,7 +49,7 @@ export const Backup: React.FC = () => {
         zip(files, (err, data) => (err ? reject(err) : resolve(data)))
       })
 
-      downloadBlob(new Blob([zipped.buffer], { type: 'application/zip' }), 'opcg-backup.zip')
+      downloadBlob(new Blob([new Uint8Array(zipped)], { type: 'application/zip' }), 'opcg-backup.zip')
       setBusy(null)
       alert('バックアップZIPを保存しました')
     } catch (e) {
@@ -89,7 +89,7 @@ export const Backup: React.FC = () => {
       for (const [name, bytes] of imageEntries) {
         const base = name.replace(/^images\//, '')
         const cardId = base.replace(/\.[^.]+$/, '')
-        const blob = new Blob([bytes.buffer], { type: guessMime(name) })
+        const blob = new Blob([new Uint8Array(bytes)], { type: guessMime(name) })
         // thumb再生成
         const thumb = await makeThumbnail(blob, 220)
 

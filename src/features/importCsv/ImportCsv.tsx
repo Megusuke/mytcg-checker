@@ -3,14 +3,14 @@ import Papa from 'papaparse'
 import type { Card } from '../../models'
 import { putCards } from '../../db'
 
+function S(v: unknown): string {
+  return (v ?? '').toString().trim()
+}
+
 export const ImportCsv: React.FC = () => {
   const [busy, setBusy] = useState(false)
   const [count, setCount] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  function S(v: unknown): string {
-    return (v ?? '').toString().trim()
-  }
 
   function mapRow(row: any): Card {
     return {
@@ -32,7 +32,7 @@ export const ImportCsv: React.FC = () => {
   }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const inputEl = e.currentTarget // ← 先に保持
+    const inputEl = e.currentTarget
     const file = inputEl.files?.[0]
     if (!file) return
     setBusy(true)
@@ -40,9 +40,7 @@ export const ImportCsv: React.FC = () => {
     try {
       const text = await file.text()
       const parsed = Papa.parse(text, { header: true, skipEmptyLines: true })
-      if (parsed.errors?.length) {
-        console.warn(parsed.errors)
-      }
+      if (parsed.errors?.length) console.warn(parsed.errors)
       const rows = (parsed.data as any[])
       const cards: Card[] = rows.map(mapRow).filter(c => c.cardId)
       await putCards(cards)
@@ -52,8 +50,7 @@ export const ImportCsv: React.FC = () => {
       console.error(err)
       alert('CSV取り込みでエラーが発生しました')
     } finally {
-      // 入力の値をクリア（同じファイルを続けて選べるように）
-      if (inputEl) inputEl.value = ''
+      inputEl.value = ''
       setBusy(false)
     }
   }

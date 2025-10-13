@@ -21,7 +21,7 @@ export function useImportZip() {
       const base = name.replace(/^.*\//, '')      // フォルダ無視
       const cardId = base.replace(/\.[^.]+$/, '') // 拡張子除去 → OP06-001
 
-      const blob = new Blob([bytes.buffer], { type: guessMime(name) })
+     const blob = new Blob([new Uint8Array(bytes)], { type: guessMime(name) })
       const thumb = await makeThumbnail(blob, 220)
 
       const tx = db.transaction('images', 'readwrite')
