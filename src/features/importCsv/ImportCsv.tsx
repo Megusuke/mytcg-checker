@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react'
 import Papa from 'papaparse'
 import type { Card } from '../../models'
 import { putCards } from '../../db'
+import { useToast } from '../../components/Toaster'
 
 function S(v: unknown): string {
   return (v ?? '').toString().trim()
@@ -11,7 +12,8 @@ export const ImportCsv: React.FC = () => {
   const [busy, setBusy] = useState(false)
   const [count, setCount] = useState<number | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
+  const toast = useToast()
+  
   function mapRow(row: any): Card {
     return {
       cardId: S(row.cardId),
@@ -45,10 +47,12 @@ export const ImportCsv: React.FC = () => {
       const cards: Card[] = rows.map(mapRow).filter(c => c.cardId)
       await putCards(cards)
       setCount(cards.length)
-      alert(`カードを ${cards.length} 件取り込みました`)
+      // 成功時:
+      toast({ text: `カードを ${cards.length} 件取り込みました`, type: 'ok' })
     } catch (err) {
       console.error(err)
-      alert('CSV取り込みでエラーが発生しました')
+      // エラー時:
+      toast({ text: 'CSV取り込みでエラーが発生しました', type:'error' })
     } finally {
       inputEl.value = ''
       setBusy(false)
@@ -57,13 +61,11 @@ export const ImportCsv: React.FC = () => {
 
   return (
     <div style={{display:'grid', gap:8}}>
-      <label style={{display:'inline-block', padding:'8px 12px', background:'#10b981', color:'#fff', borderRadius:8, cursor:'pointer'}}>
-        カードCSVを選択
-        <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={onPick} hidden />
+      <label className="btn ok" style={{width:'fit-content'}}>
+       カードCSVを選択
+       <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={onPick} hidden />
       </label>
-      {busy && <div>読み込み中...</div>}
-      {count !== null && <div>取り込み件数: {count}</div>}
-      <small>CSVヘッダ: cardId,name,number,rarity,color,kind,type,cost,counter,life,power,effect,attribute,blockicon</small>
+      {busy && <div className="badge">読み込み中…</div>}
     </div>
   )
 }

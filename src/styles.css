@@ -1,0 +1,83 @@
+:root {
+  --bg: #0b1020;
+  --panel: #121a2f;
+  --muted: #94a3b8;
+  --text: #e5e7eb;
+  --brand: #0ea5e9;
+  --ok: #10b981;
+  --warn: #f59e0b;
+  --error: #ef4444;
+  --ring: #38bdf8;
+  --card: #0f172a;
+  --shadow: 0 6px 24px rgba(2,8,23,.24), 0 1px 2px rgba(2,8,23,.36);
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{
+  margin:0; font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;
+  background: var(--bg); color: var(--text);
+}
+
+/* コンテナ */
+.container{max-width:1100px; margin:0 auto; padding:16px}
+
+/* 見出し */
+h1{font-size:22px; margin:0 0 12px}
+h2{font-size:18px; margin:16px 0 8px}
+
+/* カード風パネル */
+.panel{
+  background: var(--panel); border:1px solid #1e293b; border-radius:12px; padding:12px;
+  box-shadow: var(--shadow);
+}
+
+/* 共通ボタン */
+.btn{
+  display:inline-flex; align-items:center; gap:8px;
+  background: var(--brand); color:#fff; border:none; border-radius:10px;
+  padding:8px 12px; cursor:pointer; transition: transform .06s ease, filter .2s;
+}
+.btn:active{ transform: translateY(1px) }
+.btn.neutral{ background:#334155 }
+.btn.ok{ background: var(--ok) }
+.btn.warn{ background: var(--warn) }
+.btn.ghost{ background: transparent; border:1px solid #334155; color:#cbd5e1 }
+
+/* 入力系 */
+.input, .select{
+  width:100%; padding:10px 12px; border-radius:10px;
+  background:#0b1223; border:1px solid #263246; color:var(--text); outline:none;
+}
+.input:focus, .select:focus{ border-color: var(--ring); box-shadow: 0 0 0 3px rgba(56,189,248,.2) }
+
+/* グリッド */
+.grid{ display:grid; gap:12px }
+.toolbar{
+  position:sticky; top:0; z-index:50; padding:12px; margin:-12px -12px 12px;
+  background: linear-gradient(180deg, rgba(11,16,32,.95), rgba(11,16,32,.80));
+  backdrop-filter: blur(8px); border-bottom:1px solid #1e293b;
+}
+
+/* カード行 */
+.card{
+  display:grid; grid-template-columns:96px 1fr; gap:10px;
+  background: var(--card); border:1px solid #1e293b; border-radius:14px; padding:10px;
+  transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.card:hover{ transform: translateY(-2px); box-shadow: var(--shadow); border-color:#334155 }
+.card.owned{ outline:2px solid rgba(16,185,129,.35) }
+
+/* バッジ */
+.badge{ font-size:12px; padding:2px 8px; border-radius:999px; background:#0b1223; border:1px solid #253149; color:#cbd5e1 }
+
+/* プログレス */
+.progress{ height:10px; background:#0b1223; border-radius:8px; overflow:hidden; border:1px solid #22304b }
+.progress .fill{ height:100%; background: var(--brand); }
+
+/* トースト */
+.toast-wrap{ position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:99999 }
+.toast{ background:#0b1223; color:#e5e7eb; border:1px solid #253149; border-left:4px solid var(--brand);
+  padding:10px 12px; border-radius:10px; box-shadow: var(--shadow) }
+.toast.ok{ border-left-color: var(--ok) }
+.toast.error{ border-left-color: var(--error) }

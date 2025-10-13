@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { zip, unzip } from 'fflate'
 import { getAllCards, getAllOwnership, getAllImageKeys, getImageBlobByKey, clearAllStores, putCards, putOwnershipBulk } from '../../db'
 import { guessMime, makeThumbnail } from '../../utils/images'
+import { useToast } from '../../components/Toaster'
 
 // バイナリ→ダウンロード
 function downloadBlob(data: Blob, filename: string) {
@@ -20,7 +21,8 @@ async function blobToUint8(blob: Blob): Promise<Uint8Array> {
 
 export const Backup: React.FC = () => {
   const [busy, setBusy] = useState<null | string>(null)
-
+  const toast = useToast()
+  
   async function onExport() {
     try {
       setBusy('エクスポート中...')
@@ -51,11 +53,13 @@ export const Backup: React.FC = () => {
 
       downloadBlob(new Blob([new Uint8Array(zipped)], { type: 'application/zip' }), 'opcg-backup.zip')
       setBusy(null)
-      alert('バックアップZIPを保存しました')
+      // 成功時:
+      toast({ text: 'バックアップZIPを保存しました', type:'ok' })
     } catch (e) {
       console.error(e)
       setBusy(null)
-      alert('エクスポートでエラーが発生しました')
+      // エラー時:
+      toast({ text: 'エクスポートでエラーが発生しました', type:'error' })
     }
   }
 

@@ -84,48 +84,28 @@ export const CardsList: React.FC = () => {
     <section>
       <h2>カード一覧（{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
 
-      {/* コントロール群 */}
-      <div style={{display:'grid', gap:8, gridTemplateColumns:'1fr repeat(4, minmax(120px, auto))', alignItems:'center'}}>
-        <input
-          placeholder="検索（名前/番号/タイプ/効果）"
-          value={q}
-          onChange={e => setQ(e.target.value)}
-          style={{width:'100%', padding:8, border:'1px solid #ddd', borderRadius:8}}
-        />
-        <select value={filterColor} onChange={e => setFilterColor(e.target.value)} style={{padding:8}}>
-          {colorOptions.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
-        <select value={filterRarity} onChange={e => setFilterRarity(e.target.value)} style={{padding:8}}>
-          {rarityOptions.map(r => <option key={r} value={r}>{r}</option>)}
-        </select>
-        <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)} style={{padding:8}}>
-          <option value="number">番号</option>
-          <option value="name">名前</option>
-          <option value="rarity">レアリティ</option>
-          <option value="color">色</option>
-        </select>
-        <button onClick={() => setSortAsc(s => !s)} style={{padding:'8px 12px'}}>{sortAsc ? '昇順' : '降順'}</button>
-      </div>
+  // 1) ツールバー
+  <div className="toolbar grid" style={{gridTemplateColumns:'1fr repeat(4, minmax(120px, auto))', alignItems:'center'}}>
+    <input className="input" placeholder="検索（名前/番号/タイプ/効果）" … />
+    <select className="select" …>{/* color */}</select>
+    <select className="select" …>{/* rarity */}</select>
+    <select className="select" …>{/* sort */}</select>
+    <button className="btn ghost" onClick={() => setSortAsc(s=>!s)}>{sortAsc?'昇順':'降順'}</button>
+  </div>
 
-      <div style={{display:'flex', gap:12, alignItems:'center', marginTop:8}}>
-        <label style={{display:'inline-flex', alignItems:'center', gap:6}}>
-          <input type="checkbox" checked={onlyOwned} onChange={e => setOnlyOwned(e.target.checked)} />
-          所持のみ
-        </label>
-        <button onClick={() => { setFilterColor('ALL'); setFilterRarity('ALL'); setQ(''); setOnlyOwned(false); }} style={{padding:'6px 10px'}}>
-          絞り込みリセット
-        </button>
-      </div>
+  <div style={{display:'flex', gap:12, alignItems:'center', marginTop:8}}>
+    <label style={{display:'inline-flex', alignItems:'center', gap:6}}>
+      <input type="checkbox" checked={onlyOwned} onChange={e => setOnlyOwned(e.target.checked)} />
+      所持のみ
+    </label>
+    <button className="btn neutral" onClick={() => { … }}>絞り込みリセット</button>
+  </div>
 
       {busy && <div style={{marginTop:8}}>読み込み中...</div>}
       {!busy && !cards.length && <div style={{marginTop:8}}>カードがありません。CSVを取り込んでください。</div>}
 
-      <div style={{
-        display:'grid',
-        gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))',
-        gap:12,
-        marginTop:12
-      }}>
+      // 2) カード行
+      <div key={card.cardId} className={`card ${owned ? 'owned':''}`}>
         {filtered.map(card => {
           const cnt = ownCache[card.cardId] ?? 0
           const owned = cnt > 0
