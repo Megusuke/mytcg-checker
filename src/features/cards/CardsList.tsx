@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import type { Card } from '../../models'
 import { getAllCards, getOwnership, setOwnership } from '../../db'
 import { CardThumb } from '../../components/CardThumb'
+import { ImageModal } from '../../components/ImageModal'
 
 type SortKey = 'name' | 'number' | 'rarity' | 'color'
 
@@ -15,6 +16,7 @@ export const CardsList: React.FC = () => {
   const [sortKey, setSortKey] = useState<SortKey>('number')
   const [sortAsc, setSortAsc] = useState<boolean>(true)
   const [onlyOwned, setOnlyOwned] = useState<boolean>(false)
+  const [previewId, setPreviewId] = useState<string | null>(null) // ★ 追加
 
   useEffect(() => {
     setBusy(true)
@@ -24,7 +26,6 @@ export const CardsList: React.FC = () => {
     })
   }, [])
 
-  // 所持枚数の初期ロード
   useEffect(() => {
     (async () => {
       const copy: Record<string, number> = {}
@@ -36,11 +37,9 @@ export const CardsList: React.FC = () => {
     })()
   }, [cards])
 
-  // 色/レアリティ候補
   const colorOptions = useMemo(() => ['ALL', ...Array.from(new Set(cards.map(c => c.color).filter(Boolean))).sort()], [cards])
   const rarityOptions = useMemo(() => ['ALL', ...Array.from(new Set(cards.map(c => c.rarity).filter(Boolean))).sort()], [cards])
 
-  // 検索＋フィルタ
   const filtered = useMemo(() => {
     const key = q.trim().toLowerCase()
     let list = cards
@@ -57,14 +56,12 @@ export const CardsList: React.FC = () => {
     if (filterRarity !== 'ALL') list = list.filter(c => c.rarity === filterRarity)
     if (onlyOwned) list = list.filter(c => (ownCache[c.cardId] ?? 0) > 0)
 
-    // 並び替え
     const mul = sortAsc ? 1 : -1
     list = [...list].sort((a, b) => {
       const av = (a[sortKey] ?? '').toString()
       const bv = (b[sortKey] ?? '').toString()
       return av.localeCompare(bv, 'ja') * mul
     })
-
     return list
   }, [cards, q, filterColor, filterRarity, sortKey, sortAsc, onlyOwned, ownCache])
 
@@ -74,7 +71,6 @@ export const CardsList: React.FC = () => {
     setOwnCache(prev => ({ ...prev, [cardId]: next }))
   }
 
-  // クイックトグル（0↔1）
   async function toggleOwned(cardId: string) {
     const cur = ownCache[cardId] ?? 0
     const next = cur > 0 ? 0 : 1
@@ -140,7 +136,15 @@ export const CardsList: React.FC = () => {
               background: owned ? '#f0fdf4' : 'white'
             }}>
               <div style={{position:'relative'}}>
-                <CardThumb cardId={card.cardId} size={96}/>
+                {/* サムネをタップで拡大 */}
+                <button
+                  onClick={() => setPreviewId(card.cardId)}
+                  style={{all:'unset', cursor:'zoom-in', display:'block', lineHeight:0}}
+                  aria-label="原本画像を拡大"
+                  title="原本画像を拡大"
+                >
+                  <CardThumb cardId={card.cardId} size={96}/>
+                </button>
                 <button
                   title="クイック所持トグル"
                   onClick={() => toggleOwned(card.cardId)}
@@ -180,6 +184,14 @@ export const CardsList: React.FC = () => {
           )
         })}
       </div>
+
+      {previewId && (
+        <ImageModal
+          cardId={previewId}
+          title={cards.find(c => c.cardId === previewId)?.name ?? previewId}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
     </section>
   )
 }
