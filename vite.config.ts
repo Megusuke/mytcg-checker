@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: '/', // ← GitHub Pages公開時に '/<repo名>/' に変更
+  base: '/mytcg-checker/', // ← GitHub Pages公開時に '/<repo名>/' に変更
   plugins: [
     react(),
     VitePWA({
@@ -13,7 +13,7 @@ export default defineConfig({
       manifest: {
         name: 'OPCG Checker',
         short_name: 'OPCG',
-        start_url: '/',
+        start_url: '/mytcg-checker/',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#0ea5e9',
