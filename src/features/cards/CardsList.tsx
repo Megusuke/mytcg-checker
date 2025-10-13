@@ -3,11 +3,18 @@ import type { Card } from '../../models'
 import { getAllCards, getOwnership, setOwnership } from '../../db'
 import { CardThumb } from '../../components/CardThumb'
 
+type SortKey = 'name' | 'number' | 'rarity' | 'color'
+
 export const CardsList: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [ownCache, setOwnCache] = useState<Record<string, number>>({})
+  const [filterColor, setFilterColor] = useState<string>('ALL')
+  const [filterRarity, setFilterRarity] = useState<string>('ALL')
+  const [sortKey, setSortKey] = useState<SortKey>('number')
+  const [sortAsc, setSortAsc] = useState<boolean>(true)
+  const [onlyOwned, setOnlyOwned] = useState<boolean>(false)
 
   useEffect(() => {
     setBusy(true)
@@ -17,19 +24,7 @@ export const CardsList: React.FC = () => {
     })
   }, [])
 
-  // 検索（名前・番号・タイプ・効果を部分一致）
-  const filtered = useMemo(() => {
-    const key = q.trim().toLowerCase()
-    if (!key) return cards
-    return cards.filter(c =>
-      (c.name?.toLowerCase().includes(key)) ||
-      (c.number?.toLowerCase().includes(key)) ||
-      (c.type?.toLowerCase().includes(key)) ||
-      (c.effect?.toLowerCase().includes(key))
-    )
-  }, [q, cards])
-
-  // 所持枚数の遅延ロード（行が表示された時に読む方式でもOK。ここは最初にざっと読む簡易実装）
+  // 所持枚数の初期ロード
   useEffect(() => {
     (async () => {
       const copy: Record<string, number> = {}
@@ -41,10 +36,49 @@ export const CardsList: React.FC = () => {
     })()
   }, [cards])
 
+  // 色/レアリティ候補
+  const colorOptions = useMemo(() => ['ALL', ...Array.from(new Set(cards.map(c => c.color).filter(Boolean))).sort()], [cards])
+  const rarityOptions = useMemo(() => ['ALL', ...Array.from(new Set(cards.map(c => c.rarity).filter(Boolean))).sort()], [cards])
+
+  // 検索＋フィルタ
+  const filtered = useMemo(() => {
+    const key = q.trim().toLowerCase()
+    let list = cards
+
+    if (key) {
+      list = list.filter(c =>
+        (c.name?.toLowerCase().includes(key)) ||
+        (c.number?.toLowerCase().includes(key)) ||
+        (c.type?.toLowerCase().includes(key)) ||
+        (c.effect?.toLowerCase().includes(key))
+      )
+    }
+    if (filterColor !== 'ALL') list = list.filter(c => c.color === filterColor)
+    if (filterRarity !== 'ALL') list = list.filter(c => c.rarity === filterRarity)
+    if (onlyOwned) list = list.filter(c => (ownCache[c.cardId] ?? 0) > 0)
+
+    // 並び替え
+    const mul = sortAsc ? 1 : -1
+    list = [...list].sort((a, b) => {
+      const av = (a[sortKey] ?? '').toString()
+      const bv = (b[sortKey] ?? '').toString()
+      return av.localeCompare(bv, 'ja') * mul
+    })
+
+    return list
+  }, [cards, q, filterColor, filterRarity, sortKey, sortAsc, onlyOwned, ownCache])
+
   async function changeCount(cardId: string, next: number) {
     if (next < 0) next = 0
     await setOwnership(cardId, next)
     setOwnCache(prev => ({ ...prev, [cardId]: next }))
+  }
+
+  // クイックトグル（0↔1）
+  async function toggleOwned(cardId: string) {
+    const cur = ownCache[cardId] ?? 0
+    const next = cur > 0 ? 0 : 1
+    await changeCount(cardId, next)
   }
 
   const ownedKinds = Object.values(ownCache).filter(n => (n ?? 0) > 0).length
@@ -53,25 +87,74 @@ export const CardsList: React.FC = () => {
   return (
     <section>
       <h2>カード一覧（{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
-      <input
-        placeholder="検索（名前/番号/タイプ/効果）"
-        value={q}
-        onChange={e => setQ(e.target.value)}
-        style={{width:'100%', padding:8, margin:'8px 0', border:'1px solid #ddd', borderRadius:8}}
-      />
-      {busy && <div>読み込み中...</div>}
-      {!busy && !cards.length && <div>カードがありません。CSVを取り込んでください。</div>}
+
+      {/* コントロール群 */}
+      <div style={{display:'grid', gap:8, gridTemplateColumns:'1fr repeat(4, minmax(120px, auto))', alignItems:'center'}}>
+        <input
+          placeholder="検索（名前/番号/タイプ/効果）"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          style={{width:'100%', padding:8, border:'1px solid #ddd', borderRadius:8}}
+        />
+        <select value={filterColor} onChange={e => setFilterColor(e.target.value)} style={{padding:8}}>
+          {colorOptions.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select value={filterRarity} onChange={e => setFilterRarity(e.target.value)} style={{padding:8}}>
+          {rarityOptions.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <select value={sortKey} onChange={e => setSortKey(e.target.value as SortKey)} style={{padding:8}}>
+          <option value="number">番号</option>
+          <option value="name">名前</option>
+          <option value="rarity">レアリティ</option>
+          <option value="color">色</option>
+        </select>
+        <button onClick={() => setSortAsc(s => !s)} style={{padding:'8px 12px'}}>{sortAsc ? '昇順' : '降順'}</button>
+      </div>
+
+      <div style={{display:'flex', gap:12, alignItems:'center', marginTop:8}}>
+        <label style={{display:'inline-flex', alignItems:'center', gap:6}}>
+          <input type="checkbox" checked={onlyOwned} onChange={e => setOnlyOwned(e.target.checked)} />
+          所持のみ
+        </label>
+        <button onClick={() => { setFilterColor('ALL'); setFilterRarity('ALL'); setQ(''); setOnlyOwned(false); }} style={{padding:'6px 10px'}}>
+          絞り込みリセット
+        </button>
+      </div>
+
+      {busy && <div style={{marginTop:8}}>読み込み中...</div>}
+      {!busy && !cards.length && <div style={{marginTop:8}}>カードがありません。CSVを取り込んでください。</div>}
 
       <div style={{
         display:'grid',
         gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))',
-        gap:12
+        gap:12,
+        marginTop:12
       }}>
         {filtered.map(card => {
           const cnt = ownCache[card.cardId] ?? 0
+          const owned = cnt > 0
           return (
-            <div key={card.cardId} style={{display:'grid', gridTemplateColumns:'96px 1fr', gap:8, border:'1px solid #eee', borderRadius:12, padding:8}}>
-              <CardThumb cardId={card.cardId} size={96}/>
+            <div key={card.cardId} style={{
+              display:'grid', gridTemplateColumns:'96px 1fr', gap:8,
+              border:'1px solid #eee', borderRadius:12, padding:8,
+              background: owned ? '#f0fdf4' : 'white'
+            }}>
+              <div style={{position:'relative'}}>
+                <CardThumb cardId={card.cardId} size={96}/>
+                <button
+                  title="クイック所持トグル"
+                  onClick={() => toggleOwned(card.cardId)}
+                  style={{
+                    position:'absolute', right:4, bottom:4,
+                    fontSize:12, padding:'2px 6px',
+                    borderRadius:6, border:'1px solid #ccc',
+                    background: owned ? '#10b981' : '#fff', color: owned ? '#fff' : '#111'
+                  }}
+                >
+                  {owned ? '所持✓' : '未所持'}
+                </button>
+              </div>
+
               <div style={{display:'grid', gap:4}}>
                 <div style={{fontWeight:600}}>{card.name} <small>({card.cardId})</small></div>
                 <div style={{fontSize:12, color:'#666'}}>
@@ -80,6 +163,7 @@ export const CardsList: React.FC = () => {
                 <div style={{fontSize:12, color:'#666', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis'}} title={card.effect}>
                   {card.effect}
                 </div>
+
                 <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
                   <button onClick={() => changeCount(card.cardId, cnt - 1)}>-</button>
                   <input
