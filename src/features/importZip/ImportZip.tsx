@@ -28,7 +28,12 @@ export const ImportZip: React.FC = () => {
     <div style={{display:'grid', gap:12}}>
       <label style={{display:'inline-block', padding:'8px 12px', background:'#0ea5e9', color:'#fff', borderRadius:8, cursor:'pointer'}}>
         画像ZIPを選択
-        <input type="file" accept="application/zip" onChange={onPick} hidden />
+         <input
+           type="file"
+           accept=".zip,application/zip,application/x-zip-compressed,application/octet-stream"
+           onChange={onPick}
+           hidden
+         />
       </label>
       {busy && (
         <div>
