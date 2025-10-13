@@ -94,3 +94,35 @@ h2{font-size:18px; margin:16px 0 8px}
 }
 .tab:not(.active):hover{ border-color:#334155 }
 
+/* --- 画面幅に合わせる強化 --- */
+.container{max-width:1100px; width:100%; padding:16px; padding-left:clamp(12px,4vw,24px); padding-right:clamp(12px,4vw,24px)}
+
+/* インポート周り：2列→1列 */
+.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+@media (max-width: 860px){
+  .two-col{ grid-template-columns:1fr }
+}
+
+/* 検索ツールバー：PC=5列 → SP=2列 */
+.toolbar-grid{ grid-template-columns: 1fr repeat(4, minmax(120px, auto)); align-items:center }
+@media (max-width: 860px){
+  .toolbar-grid{ grid-template-columns: 1fr 1fr; gap:8px }
+  .toolbar-grid .select, .toolbar-grid .btn, .toolbar-grid .input{ width:100% }
+}
+
+/* カードグリッド：列幅を段階的に縮める */
+.cards-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:12px; margin-top:12px }
+@media (max-width: 640px){
+  .cards-grid{ grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) }
+}
+@media (max-width: 420px){
+  .cards-grid{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) }
+}
+
+/* カード行：SPで縦積み */
+@media (max-width: 520px){
+  .card{ grid-template-columns: 1fr }
+}
+
+/* iPhoneノッチの安全域（PWA想定） */
+body{ padding-bottom: env(safe-area-inset-bottom) }

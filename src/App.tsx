@@ -27,7 +27,7 @@ export default function App() {
 
       {tab === 'import' && (
         <section className="panel grid" style={{gridTemplateColumns:'1fr', gap:12}}>
-          <div className="grid" style={{gridTemplateColumns:'1fr 1fr', gap:12}}>
+          <div className="two-col">
             <ImportZip />
             <ZipDoctor />
           </div>

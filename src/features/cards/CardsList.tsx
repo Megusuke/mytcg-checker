@@ -1,4 +1,3 @@
-// src/features/cards/CardsList.tsx
 import { useEffect, useMemo, useState } from 'react'
 import type { Card } from '../../models'
 import { getAllCards, getOwnership, setOwnership } from '../../db'
@@ -90,11 +89,8 @@ export const CardsList: React.FC = () => {
     <section>
       <h2>カード一覧（{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
 
-      {/* ツールバー（スティッキー） */}
-      <div
-        className="toolbar grid"
-        style={{ gridTemplateColumns: '1fr repeat(4, minmax(120px, auto))', alignItems: 'center' }}
-      >
+      {/* ← ここがレスポンシブ対応のツールバー */}
+      <div className="toolbar grid toolbar-grid">
         <input
           className="input"
           placeholder="検索（名前/番号/タイプ/効果）"
@@ -144,17 +140,8 @@ export const CardsList: React.FC = () => {
         </button>
       </div>
 
-      {busy && <div style={{ marginTop: 8 }}>読み込み中...</div>}
-      {!busy && !cards.length && <div style={{ marginTop: 8 }}>カードがありません。CSVを取り込んでください。</div>}
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: 12,
-          marginTop: 12
-        }}
-      >
+      {/* ← ここがカードのレスポンシブグリッド */}
+      <div className="cards-grid">
         {filtered.map(card => {
           const cnt = ownCache[card.cardId] ?? 0
           const owned = cnt > 0
@@ -217,6 +204,10 @@ export const CardsList: React.FC = () => {
         })}
       </div>
 
+      <div style={{ marginTop: 12 }}>
+        <div className="progress"><div className="fill" style={{ width: `${progress}%` }} /></div>
+      </div>
+
       {previewId && (
         <ImageModal
           cardId={previewId}
@@ -224,10 +215,6 @@ export const CardsList: React.FC = () => {
           onClose={() => setPreviewId(null)}
         />
       )}
-
-      <div style={{ marginTop: 12 }}>
-        <div className="progress"><div className="fill" style={{ width: `${progress}%` }} /></div>
-      </div>
     </section>
   )
 }
