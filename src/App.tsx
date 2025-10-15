@@ -7,9 +7,10 @@ import { Stats } from './features/stats/Stats'
 import { Backup } from './features/backup/Backup'
 import { Toaster } from './components/Toaster'
 import { Tabs } from './components/Tabs'
+import { Collect } from './features/collect/Collect'
 
 export default function App() {
-  const [tab, setTab] = useState<'import' | 'search' | 'stats'>('import')
+  const [tab, setTab] = useState<'import'|'search'|'collect'|'stats'>('import')
 
   return (
     <div className="app-viewport">
@@ -20,6 +21,7 @@ export default function App() {
           tabs={[
             { key: 'import', label: 'インポート' },
             { key: 'search', label: '検索' },
+            { key: 'collect', label: '収集' },
             { key: 'stats',  label: '統計' },
           ]}
           value={tab}
@@ -46,7 +48,14 @@ export default function App() {
             <CardsList />
           </section>
         )}
-
+        
+        {/* 収集 */}
+        {tab === 'collect' && (
+          <section className="panel">
+          <Collect />
+          </section>
+        )}
+        
         {/* 統計：こちらもスクロール可にしておく */}
         {tab === 'stats' && (
           <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto' }}>

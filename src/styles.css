@@ -240,3 +240,96 @@ body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
 }
 
 /* すでに .toolbar は不透明＆境界線ありにしてあるのでそのままでOK */
+
+/* === Collect（収集） === */
+.pager{
+  margin-top: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.page{
+  width: 100%;
+  min-height: 0;
+  scroll-snap-align: start;
+  display: inline-block;
+  vertical-align: top;
+}
+.pager{ white-space: nowrap }
+.page{ white-space: normal }
+
+/* 9枚（3x3）グリッド */
+.collect-grid{
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+.collect-item{
+  position: relative;
+  display: block;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.collect-item .dim{
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.45);     /* 未所持＝暗く */
+  pointer-events: none;
+}
+.collect-item.owned .dim{ display: none }
+
+/* 横ページ幅を100%にするためのテクニック */
+.pager > .page{ width: 100%; }
+
+/* 端末小さい時は隙間を少し詰める */
+@media (max-width: 420px){
+  .collect-grid{ gap: 6px }
+}
+
+/* === Collect（収集） 横スクロールのみ === */
+.pager{
+  margin-top: 8px;
+  display: flex;               /* ← フレックスで横並び */
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.page{
+  flex: 0 0 100%;              /* ← ビューポート幅＝1ページ */
+  scroll-snap-align: start;
+}
+
+.collect-grid{
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+.collect-item{
+  position: relative;
+  display: block;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.collect-item .dim{
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.45);   /* 未所持＝暗く */
+  pointer-events: none;
+}
+.collect-item.owned .dim{ display: none }
+
+@media (max-width: 420px){
+  .collect-grid{ gap: 6px }
+}
