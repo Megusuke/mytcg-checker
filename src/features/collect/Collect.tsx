@@ -46,6 +46,16 @@ export const Collect: React.FC = () => {
     return [...list].sort((a,b)=> a.cardId.localeCompare(b.cardId,'ja'))
   }, [cards, qSet])
 
+  // ★ 絞り込み後の所持数
+  const ownedFiltered = useMemo(() => {
+    if (!filtered.length) return 0
+    let n = 0
+    for (const c of filtered) {
+      if ((own[c.cardId] ?? 0) > 0) n++
+    }
+    return n
+  }, [filtered, own])
+
   const pages = Math.max(1, Math.ceil(filtered.length / perPage))
   const pageCards = (p: number) => filtered.slice(p*perPage, p*perPage + perPage)
 
@@ -73,7 +83,14 @@ export const Collect: React.FC = () => {
   return (
     <section className="collect">
       <div className="grid" style={{ gridTemplateColumns:'1fr auto', alignItems:'center' }}>
-        <h2 style={{margin:0}}>収集（{filtered.length}枚 / {cards.length}）</h2>
+        <h2 style={{margin:0}}>
+          収集：所持 {ownedFiltered} / {filtered.length}
+          {filtered.length > 0 && (
+            <span style={{marginLeft:8, color:'#94a3b8'}}>
+              ({Math.round((ownedFiltered/filtered.length)*100)}%)
+            </span>
+          )}
+        </h2>
         <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
           {setOptions.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
