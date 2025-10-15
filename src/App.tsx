@@ -37,7 +37,7 @@ export default function App() {
       )}
 
       {tab === 'search' && (
-        <section className="panel">
+        <section className="panel search-surface">
           <CardsList />
         </section>
       )}

@@ -58,7 +58,7 @@ export function useImportZip() {
       // サムネ生成（Safariの createImageBitmap / toBlob 対策あり）
       let thumb: Blob
       try {
-        thumb = await makeThumbnail(original, 220)
+        thumb = await makeThumbnail(original, 600) // 長辺600pxで高精細サムネ
       } catch (e) {
         console.warn('[thumb fallback]', base, e)
         // 失敗時は原本をそのままサムネとして保存（確実に表示できる）

@@ -21,6 +21,8 @@ body{
 
 /* コンテナ */
 .container{max-width:1100px; margin:0 auto; padding:16px}
+/* --- 画面幅に合わせる強化 --- */
+.container{max-width:1100px; width:100%; padding:16px; padding-left:clamp(12px,4vw,24px); padding-right:clamp(12px,4vw,24px)}
 
 /* 見出し */
 h1{font-size:22px; margin:0 0 12px}
@@ -55,7 +57,7 @@ h2{font-size:18px; margin:16px 0 8px}
 .grid{ display:grid; gap:12px }
 .toolbar{
   position:sticky; top:0; z-index:50; padding:12px; margin:-12px -12px 12px;
-  background: linear-gradient(180deg, rgba(11,16,32,.95), rgba(11,16,32,.80));
+
   backdrop-filter: blur(8px); border-bottom:1px solid #1e293b;
 }
 
@@ -94,8 +96,6 @@ h2{font-size:18px; margin:16px 0 8px}
 }
 .tab:not(.active):hover{ border-color:#334155 }
 
-/* --- 画面幅に合わせる強化 --- */
-.container{max-width:1100px; width:100%; padding:16px; padding-left:clamp(12px,4vw,24px); padding-right:clamp(12px,4vw,24px)}
 
 /* インポート周り：2列→1列 */
 .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
@@ -149,3 +149,73 @@ input[type="number"]{
 .card.tight{ padding:0 }
 .card.tight .controls{ padding:8px }  /* 下の操作行だけ薄く余白 */
 .card.tight .thumb-box{ width:100% }  /* 画像枠は常にフル幅 */
+
+/* 1) 画面全体の下地を濃色で固定（グレー出防止） */
+html, body { background: var(--bg); min-height: 100%; }
+#root { min-height: 100%; }
+
+/* 2) 検索ツールバーを不透明に（半透明→solid） */
+.toolbar{
+  background: var(--panel);            /* ← ここを不透明に */
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  border-bottom: 1px solid #1e293b;
+}
+
+/* 3) iOS Safari だけをより強制（念のため） */
+@supports (-webkit-touch-callout: none) {
+  .toolbar{
+    background: var(--panel) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* 4) パネル内の余白は維持しつつ“塗り漏れ”を防ぐ */
+.panel { overflow: hidden; }
+
+/* 画面全体の下地は濃紺で固定 */
+html, body, #root { background: var(--bg); min-height: 100%; }
+
+/* 検索タブのカード領域は常に panel 色で塗る */
+.panel { background: var(--panel); }
+.cards-grid { background: var(--panel); }
+
+/* tight カードは内側も panel / card で統一し、隙間色を消す */
+.card.tight { padding: 0; background: var(--card); border-color: #1e293b; }
+.card.tight .thumb-box { width: 100%; background: transparent; } /* ← サムネ枠は透明に */
+.card.tight .controls { padding: 8px; background: var(--card); }
+
+/* iOS/Safariの透過ぼかしは無効化（灰色透け防止） */
+.toolbar{
+  background: var(--panel);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@supports (-webkit-touch-callout: none) {
+  .toolbar{
+    background: var(--panel) !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/* 検索タブの背景を“紺”で統一（途中で色が変わらないように） */
+.search-surface,
+.search-surface .toolbar,
+.search-surface .cards-grid,
+.search-surface .card,
+.search-surface .card.tight,
+.search-surface .card .thumb-box,
+.search-surface .card .controls {
+  background: #0b1020 !important; /* = var(--bg) と同じ紺 */
+}
+
+/* 透過ぼかしは無効化（iOSで下地が透けないように） */
+.search-surface .toolbar{
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* 必要ならボーダーの色も紺系に寄せる */
+.search-surface .card { border-color: #0f1a2e; }
