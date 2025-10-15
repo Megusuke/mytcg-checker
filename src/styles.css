@@ -1,6 +1,7 @@
 :root {
-  --bg: #0b1020;
-  --panel: #121a2f;
+  --bg: #0b1020;      /* 画面下地（濃紺） */
+  --panel: #121a2f;   /* セクション背景 */
+  --card: #0f172a;    /* カード背景 */
   --muted: #94a3b8;
   --text: #e5e7eb;
   --brand: #0ea5e9;
@@ -8,199 +9,183 @@
   --warn: #f59e0b;
   --error: #ef4444;
   --ring: #38bdf8;
-  --card: #0f172a;
   --shadow: 0 6px 24px rgba(2,8,23,.24), 0 1px 2px rgba(2,8,23,.36);
 }
 
-*{box-sizing:border-box}
-html,body,#root{height:100%}
-body{
-  margin:0; font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Noto Sans JP, sans-serif;
-  background: var(--bg); color: var(--text);
+/* 下地とタイポ */
+* { box-sizing: border-box }
+html, body, #root { min-height: 100% }
+body {
+  margin: 0;
+  font: 14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
 /* コンテナ */
-.container{max-width:1100px; margin:0 auto; padding:16px}
-/* --- 画面幅に合わせる強化 --- */
-.container{max-width:1100px; width:100%; padding:16px; padding-left:clamp(12px,4vw,24px); padding-right:clamp(12px,4vw,24px)}
+.container {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px;
+  padding-left: clamp(12px, 4vw, 24px);
+  padding-right: clamp(12px, 4vw, 24px);
+}
 
 /* 見出し */
-h1{font-size:22px; margin:0 0 12px}
-h2{font-size:18px; margin:16px 0 8px}
+h1 { font-size: 22px; margin: 0 0 12px }
+h2 { font-size: 18px; margin: 16px 0 8px }
 
-/* カード風パネル */
-.panel{
-  background: var(--panel); border:1px solid #1e293b; border-radius:12px; padding:12px;
+/* パネル */
+.panel {
+  background: var(--panel);
+  border: 1px solid #1e293b;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+  overflow: hidden; /* 塗り漏れ防止 */
+}
+
+/* タブ */
+.tabs-bar {
+  display: flex; gap: 8px;
+  border-bottom: 1px solid #1e293b;
+  margin: 0 0 12px; padding-bottom: 8px;
+}
+.tab {
+  background: transparent; color: #cbd5e1;
+  border: 1px solid #253149; border-bottom: none;
+  padding: 8px 12px; border-top-left-radius: 10px; border-top-right-radius: 10px;
+  cursor: pointer;
+}
+.tab.active {
+  background: #0b1223; color: #fff; border-color: #38bdf8;
   box-shadow: var(--shadow);
 }
+.tab:not(.active):hover { border-color: #334155 }
 
-/* 共通ボタン */
-.btn{
-  display:inline-flex; align-items:center; gap:8px;
-  background: var(--brand); color:#fff; border:none; border-radius:10px;
-  padding:8px 12px; cursor:pointer; transition: transform .06s ease, filter .2s;
+/* ボタン */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--brand); color: #fff; border: none; border-radius: 10px;
+  padding: 8px 12px; cursor: pointer;
+  transition: transform .06s ease, filter .2s;
 }
-.btn:active{ transform: translateY(1px) }
-.btn.neutral{ background:#334155 }
-.btn.ok{ background: var(--ok) }
-.btn.warn{ background: var(--warn) }
-.btn.ghost{ background: transparent; border:1px solid #334155; color:#cbd5e1 }
+.btn:active { transform: translateY(1px) }
+.btn.neutral { background: #334155 }
+.btn.ok { background: var(--ok) }
+.btn.warn { background: var(--warn) }
+.btn.ghost { background: transparent; border: 1px solid #334155; color: #cbd5e1 }
 
 /* 入力系 */
-.input, .select{
-  width:100%; padding:10px 12px; border-radius:10px;
-  background:#0b1223; border:1px solid #263246; color:var(--text); outline:none;
+.input, .select {
+  width: 100%; padding: 10px 12px; border-radius: 10px;
+  background: #0b1223; border: 1px solid #263246; color: var(--text); outline: none;
 }
-.input:focus, .select:focus{ border-color: var(--ring); box-shadow: 0 0 0 3px rgba(56,189,248,.2) }
+.input:focus, .select:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(56,189,248,.2) }
 
-/* グリッド */
-.grid{ display:grid; gap:12px }
-.toolbar{
-  position:sticky; top:0; z-index:50; padding:12px; margin:-12px -12px 12px;
-
-  backdrop-filter: blur(8px); border-bottom:1px solid #1e293b;
-}
-
-/* カード行 */
-.card{
-  display:grid; grid-template-columns:96px 1fr; gap:10px;
-  background: var(--card); border:1px solid #1e293b; border-radius:14px; padding:10px;
-  transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
-}
-.card:hover{ transform: translateY(-2px); box-shadow: var(--shadow); border-color:#334155 }
-.card.owned{ outline:2px solid rgba(16,185,129,.35) }
-
-/* バッジ */
-.badge{ font-size:12px; padding:2px 8px; border-radius:999px; background:#0b1223; border:1px solid #253149; color:#cbd5e1 }
-
-/* プログレス */
-.progress{ height:10px; background:#0b1223; border-radius:8px; overflow:hidden; border:1px solid #22304b }
-.progress .fill{ height:100%; background: var(--brand); }
-
-/* トースト */
-.toast-wrap{ position:fixed; right:16px; bottom:16px; display:grid; gap:8px; z-index:99999 }
-.toast{ background:#0b1223; color:#e5e7eb; border:1px solid #253149; border-left:4px solid var(--brand);
-  padding:10px 12px; border-radius:10px; box-shadow: var(--shadow) }
-.toast.ok{ border-left-color: var(--ok) }
-.toast.error{ border-left-color: var(--error) }
-
-.tabs-bar{
-  display:flex; gap:8px; border-bottom:1px solid #1e293b; margin:0 0 12px; padding-bottom:8px;
-}
-.tab{
-  background:transparent; color:#cbd5e1; border:1px solid #253149; border-bottom:none;
-  padding:8px 12px; border-top-left-radius:10px; border-top-right-radius:10px; cursor:pointer;
-}
-.tab.active{
-  background:#0b1223; color:#fff; border-color:#38bdf8; box-shadow: var(--shadow);
-}
-.tab:not(.active):hover{ border-color:#334155 }
-
-
-/* インポート周り：2列→1列 */
-.two-col{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
-@media (max-width: 860px){
-  .two-col{ grid-template-columns:1fr }
-}
-
-/* 検索ツールバー：PC=5列 → SP=2列 */
-.toolbar-grid{ grid-template-columns: 1fr repeat(4, minmax(120px, auto)); align-items:center }
-@media (max-width: 860px){
-  .toolbar-grid{ grid-template-columns: 1fr 1fr; gap:8px }
-  .toolbar-grid .select, .toolbar-grid .btn, .toolbar-grid .input{ width:100% }
-}
-
-/* カードグリッド：列幅を段階的に縮める */
-.cards-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap:12px; margin-top:12px }
-@media (max-width: 640px){
-  .cards-grid{ grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) }
-}
-@media (max-width: 420px){
-  .cards-grid{ grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) }
-}
-
-/* カード行：SPで縦積み */
-@media (max-width: 520px){
-  .card{ grid-template-columns: 1fr }
-}
-
-/* iPhoneノッチの安全域（PWA想定） */
-body{ padding-bottom: env(safe-area-inset-bottom) }
 /* 数値入力を2桁幅に固定 */
-.input--num{
+.input--num {
   width: 5ch !important;
   min-width: 5ch;
   max-width: 5ch;
   text-align: center;
   padding-inline: 8px;
 }
-
-/* 数値入力の上下矢印を消す（任意） */
+/* 数値入力の上下矢印を非表示 */
 input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button{
-  -webkit-appearance: none;
-  margin: 0;
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 }
+input[type="number"] { -moz-appearance: textfield }
+
+/* バッジ */
+.badge {
+  font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  background: #0b1223; border: 1px solid #253149; color: #cbd5e1;
 }
-input[type="number"]{
-  -moz-appearance: textfield;
+
+/* トースト */
+.toast-wrap { position: fixed; right: 16px; bottom: 16px; display: grid; gap: 8px; z-index: 99999 }
+.toast {
+  background: #0b1223; color: #e5e7eb; border: 1px solid #253149; border-left: 4px solid var(--brand);
+  padding: 10px 12px; border-radius: 10px; box-shadow: var(--shadow);
 }
+.toast.ok { border-left-color: var(--ok) }
+.toast.error { border-left-color: var(--error) }
 
-/* カードを左右ギリまで使うフラッシュ表示 */
-.card.tight{ padding:0 }
-.card.tight .controls{ padding:8px }  /* 下の操作行だけ薄く余白 */
-.card.tight .thumb-box{ width:100% }  /* 画像枠は常にフル幅 */
+/* グリッド基礎 */
+.grid { display: grid; gap: 12px }
 
-/* 1) 画面全体の下地を濃色で固定（グレー出防止） */
-html, body { background: var(--bg); min-height: 100%; }
-#root { min-height: 100%; }
-
-/* 2) 検索ツールバーを不透明に（半透明→solid） */
-.toolbar{
-  background: var(--panel);            /* ← ここを不透明に */
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+/* 検索ツールバー（スティッキー＆不透明） */
+.toolbar {
+  position: sticky; top: 0; z-index: 50;
+  padding: 12px; margin: 0 0 12px;
+  background: var(--panel);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
   border-bottom: 1px solid #1e293b;
 }
+/* レイアウト：PC=5列 → SP=2列 */
+.toolbar-grid { grid-template-columns: 1fr repeat(4, minmax(120px, auto)); align-items: center }
+@media (max-width: 860px) {
+  .toolbar-grid { grid-template-columns: 1fr 1fr; gap: 8px }
+  .toolbar-grid .select, .toolbar-grid .btn, .toolbar-grid .input { width: 100% }
+}
 
-/* 3) iOS Safari だけをより強制（念のため） */
+/* カード一覧のタイル */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px; margin-top: 12px;
+}
+@media (max-width: 640px) {
+  .cards-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) }
+}
+@media (max-width: 420px) {
+  .cards-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) }
+}
+
+/* カード */
+.card {
+  display: grid; grid-template-columns: 96px 1fr; gap: 10px;
+  background: var(--card); border: 1px solid #1e293b; border-radius: 14px; padding: 10px;
+  transition: transform .08s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.card:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #334155 }
+.card.owned { outline: 2px solid rgba(16,185,129,.35) }
+
+/* フル幅タイル（画像→コントロール） */
+.card.tight { padding: 0; background: var(--card); border-color: #1e293b }
+.card.tight .thumb-box { width: 100%; background: transparent }
+.card.tight .controls { padding: 8px; background: var(--card) }
+
+/* スマホ時は縦積み */
+@media (max-width: 520px) {
+  .card { grid-template-columns: 1fr }
+}
+
+/* インポート：2列→1列 */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px }
+@media (max-width: 860px) {
+  .two-col { grid-template-columns: 1fr }
+}
+
+/* 進捗（現状非表示だが残しておく） */
+.progress { height: 10px; background: #0b1223; border-radius: 8px; overflow: hidden; border: 1px solid #22304b }
+.progress .fill { height: 100%; background: var(--brand) }
+
+/* iPhoneノッチの安全域（PWA） */
+body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
+
+/* iOS Safari 強制（念のため） */
 @supports (-webkit-touch-callout: none) {
-  .toolbar{
+  .toolbar {
     background: var(--panel) !important;
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
   }
 }
 
-/* 4) パネル内の余白は維持しつつ“塗り漏れ”を防ぐ */
-.panel { overflow: hidden; }
-
-/* 画面全体の下地は濃紺で固定 */
-html, body, #root { background: var(--bg); min-height: 100%; }
-
-/* 検索タブのカード領域は常に panel 色で塗る */
-.panel { background: var(--panel); }
-.cards-grid { background: var(--panel); }
-
-/* tight カードは内側も panel / card で統一し、隙間色を消す */
-.card.tight { padding: 0; background: var(--card); border-color: #1e293b; }
-.card.tight .thumb-box { width: 100%; background: transparent; } /* ← サムネ枠は透明に */
-.card.tight .controls { padding: 8px; background: var(--card); }
-
-/* iOS/Safariの透過ぼかしは無効化（灰色透け防止） */
-.toolbar{
-  background: var(--panel);
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
-}
-@supports (-webkit-touch-callout: none) {
-  .toolbar{
-    background: var(--panel) !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-  }
-}
-
-/* 検索タブの背景を“紺”で統一（途中で色が変わらないように） */
+/* 検索タブの背景を“統一色”に（段差根絶）
+   App.tsx で <section className="panel search-surface"> にしている前提 */
 .search-surface,
 .search-surface .toolbar,
 .search-surface .cards-grid,
@@ -208,14 +193,6 @@ html, body, #root { background: var(--bg); min-height: 100%; }
 .search-surface .card.tight,
 .search-surface .card .thumb-box,
 .search-surface .card .controls {
-  background: #0b1020 !important; /* = var(--bg) と同じ紺 */
+  background: var(--panel) !important;
 }
-
-/* 透過ぼかしは無効化（iOSで下地が透けないように） */
-.search-surface .toolbar{
-  -webkit-backdrop-filter: none !important;
-  backdrop-filter: none !important;
-}
-
-/* 必要ならボーダーの色も紺系に寄せる */
-.search-surface .card { border-color: #0f1a2e; }
+.search-surface .card { border-color: #1e293b }

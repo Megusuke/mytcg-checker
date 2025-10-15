@@ -82,7 +82,7 @@ export const CardsList: React.FC = () => {
 
   return (
     <section>
-      <h2>カード検索 / 所持チェック（{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
+      <h2>所持数: （{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
 
       {/* 絞り込み（検索・セット・未所持のみ） */}
       <div className="toolbar grid toolbar-grid">
@@ -153,10 +153,6 @@ export const CardsList: React.FC = () => {
             </div>
           )
         })}
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <div className="progress"><div className="fill" style={{ width: `${progress}%` }} /></div>
       </div>
     </section>
   )
