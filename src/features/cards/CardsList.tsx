@@ -80,11 +80,13 @@ export const CardsList: React.FC = () => {
   const ownedKinds = Object.values(ownCache).filter(n => (n ?? 0) > 0).length
   const progress = cards.length ? Math.round((ownedKinds / cards.length) * 100) : 0
 
-  return (
-    <section>
-      <h2>所持数: （{filtered.length} / {cards.length}） 所持率: {progress}%</h2>
+// CardsList.tsx の return 部分を差し替え（ロジックはそのままでOK）
+return (
+  <section className="cards-page">
+    {/* 固定ヘッダー（ここまでが常に表示される） */}
+    <div className="search-header">
+      <h2>カード検索 / 所持チェック（{filtered.length} / {cards.length}）</h2>
 
-      {/* 絞り込み（検索・セット・未所持のみ） */}
       <div className="toolbar grid toolbar-grid">
         <input
           className="input"
@@ -96,20 +98,15 @@ export const CardsList: React.FC = () => {
           {setOptions.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <label style={{display:'inline-flex', alignItems:'center', gap:6}}>
-          <input
-            type="checkbox"
-            checked={onlyUnowned}
-            onChange={e => setOnlyUnowned(e.target.checked)}
-          />
+          <input type="checkbox" checked={onlyUnowned} onChange={e => setOnlyUnowned(e.target.checked)} />
           未所持のみ
         </label>
         <div></div>
       </div>
+    </div>
 
-      {busy && <div style={{ marginTop: 8 }}>読み込み中...</div>}
-      {!busy && !cards.length && <div style={{ marginTop: 8 }}>カードがありません。CSVを取り込んでください。</div>}
-
-      {/* 画像フル幅＋下にコントロール（左右の余白なし） */}
+    {/* ここだけスクロール領域 */}
+    <div className="cards-scroll">
       <div className="cards-grid">
         {filtered.map(card => {
           const cnt = ownCache[card.cardId] ?? 0
@@ -119,34 +116,14 @@ export const CardsList: React.FC = () => {
               <div className="thumb-box">
                 <CardThumb cardId={card.cardId} width="100%" />
               </div>
-              <div
-                className="controls"
-                style={{
-                  display:'grid',
-                  gridTemplateColumns:'auto auto auto 1fr',
-                  alignItems:'center',
-                  gap:8
-                }}
-              >
+              <div className="controls"
+                   style={{ display:'grid', gridTemplateColumns:'auto auto auto 1fr', alignItems:'center', gap:8 }}>
                 <button className="btn ghost" onClick={() => setCount(card.cardId, cnt - 1)} aria-label="減らす">-</button>
-                <input
-                  className="input input--num"
-                  type="number"
-                  min={0}
-                  max={99}
-                  inputMode="numeric"
-                  value={cnt}
-                  onChange={e => setCount(card.cardId, Number(e.target.value))}
-                  aria-label="所持枚数"
-                />
+                <input className="input input--num" type="number" min={0} max={99} inputMode="numeric"
+                       value={cnt} onChange={e => setCount(card.cardId, Number(e.target.value))} aria-label="所持枚数" />
                 <button className="btn ghost" onClick={() => setCount(card.cardId, cnt + 1)} aria-label="増やす">+</button>
-                <button
-                  className={`btn ${owned ? 'ok' : 'neutral'}`}
-                  onClick={() => toggleOwned(card.cardId)}
-                  aria-pressed={owned}
-                  aria-label="所持トグル"
-                  style={{ whiteSpace:'nowrap' }}
-                >
+                <button className={`btn ${owned ? 'ok' : 'neutral'}`} onClick={() => toggleOwned(card.cardId)}
+                        aria-pressed={owned} aria-label="所持トグル" style={{ whiteSpace:'nowrap' }}>
                   {owned ? '所持✓' : '未所持'}
                 </button>
               </div>
@@ -154,6 +131,8 @@ export const CardsList: React.FC = () => {
           )
         })}
       </div>
-    </section>
-  )
+    </div>
+  </section>
+)
+
 }

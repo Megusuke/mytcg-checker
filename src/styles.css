@@ -196,3 +196,47 @@ body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
   background: var(--panel) !important;
 }
 .search-surface .card { border-color: #1e293b }
+
+/* 外側はビューポート固定（ページ全体をスクロールさせない） */
+.app-viewport{
+  height: 100dvh;           /* iOSでも安定する動的vh */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-viewport .container{
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 検索タブのパネル内を縦分割：ヘッダー固定 + カード部スクロール */
+.search-surface{
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;         /* 外へはみ出さない */
+}
+
+.cards-page{
+  flex: 1 1 auto;
+  min-height: 0;            /* 内側スクロールを可能にする重要指定 */
+  display: flex;
+  flex-direction: column;
+}
+
+.search-header{
+  flex: 0 0 auto;           /* 固定領域（タイトル＋検索ボックス） */
+}
+
+/* カードだけスクロールさせる */
+.cards-scroll{
+  flex: 1 1 auto;
+  min-height: 0;            /* これが無いとスクロールが効かない */
+  overflow: auto;
+  -webkit-overflow-scrolling: touch; /* iOSで滑らか */
+  padding-bottom: env(safe-area-inset-bottom); /* PWAのホームバーを避ける */
+}
+
+/* すでに .toolbar は不透明＆境界線ありにしてあるのでそのままでOK */
