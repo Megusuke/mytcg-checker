@@ -1,70 +1,110 @@
-import React, { useRef, useState } from 'react'
+// CSVインポート：dan / dansort をサポート（旧 sort を dansort にフォールバック）
+import { useRef, useState } from 'react'
 import Papa from 'papaparse'
 import type { Card } from '../../models'
 import { putCards } from '../../db'
-import { useToast } from '../../components/Toaster'
 
-function S(v: unknown): string {
-  return (v ?? '').toString().trim()
-}
-
-export const ImportCsv: React.FC = () => {
-  const [busy, setBusy] = useState(false)
-  const [count, setCount] = useState<number | null>(null)
+export function ImportCsv() {
   const inputRef = useRef<HTMLInputElement>(null)
-  const toast = useToast()
-  
-function mapRow(row: any): Card {
-  return {
-    cardId:   S(row.cardId),     // 例: OP01-001
-    name:     S(row.name),
-    rarity:   S(row.rarity),
-    color:    S(row.color),
-    kind:     S(row.kind),
-    type:     S(row.type),
-    cost:     S(row.cost),
-    counter:  S(row.counter),
-    life:     S(row.life),
-    power:    S(row.power),
-    effect:   S(row.effect),
-    attribute: row.attribute ? S(row.attribute) : undefined,
-    blockicon: row.blockicon ? S(row.blockicon) : undefined,
+  const [busy, setBusy] = useState(false)
+
+  function s(v: any): string {
+    if (v === undefined || v === null) return ''
+    return String(v).trim()
   }
-}
+  function nOpt(v: any): number | undefined {
+    if (v === undefined || v === null) return undefined
+    const t = String(v).trim()
+    if (t === '') return undefined
+    const n = Number(t)
+    return Number.isFinite(n) ? n : undefined
+  }
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
-    const inputEl = e.currentTarget
-    const file = inputEl.files?.[0]
+    const file = e.target.files?.[0]
     if (!file) return
     setBusy(true)
-    setCount(null)
     try {
       const text = await file.text()
-      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true })
-      if (parsed.errors?.length) console.warn(parsed.errors)
-      const rows = (parsed.data as any[])
-      const cards: Card[] = rows.map(mapRow).filter(c => c.cardId)
+      const parsed = Papa.parse(text, {
+        header: true,
+        skipEmptyLines: true,
+        transformHeader: (h) => String(h).trim(),
+      })
+      if (parsed.errors?.length) {
+        console.error(parsed.errors)
+        alert('CSV 解析に失敗しました。ヘッダや内容をご確認ください。')
+        return
+      }
+
+      const rows: any[] = (parsed.data as any[]) || []
+      const cards: Card[] = rows.map((r) => {
+        // ヘッダ別名の許容（cardid / cardId）
+        const cardId = s(r.cardId ?? r.cardid)
+        // dan / dansort（dansortが未指定で旧sortがあればそれを採用）
+        const dan = s(r.dan)
+        const dansort = nOpt(r.dansort)
+        const legacySort = nOpt(r.sort)
+        const finalDansort = dansort ?? legacySort
+
+        const card: Card = {
+          cardId,
+          dan: dan || undefined,
+          dansort: finalDansort,
+          sort: legacySort, // 互換保持（未使用だが残してOK）
+
+          name: s(r.name),
+          rarity: s(r.rarity),
+          color: s(r.color),
+          kind: s(r.kind),
+          type: s(r.type),
+          cost: s(r.cost),
+          counter: s(r.counter),
+          life: s(r.life),
+          power: s(r.power),
+          effect: s(r.effect),
+          attribute: s(r.attribute),
+          blockicon: s(r.blockicon),
+        }
+        return card
+      }).filter(c => c.cardId)
+
+      if (!cards.length) {
+        alert('取り込む行がありません。cardId 列をご確認ください。')
+        return
+      }
+
       await putCards(cards)
-      setCount(cards.length)
-      // 成功時:
-      toast({ text: `カードを ${cards.length} 件取り込みました`, type: 'ok' })
+      alert(`カードを ${cards.length} 件取り込みました`)
     } catch (err) {
       console.error(err)
-      // エラー時:
-      toast({ text: 'CSV取り込みでエラーが発生しました', type:'error' })
+      alert('CSV の読み込みに失敗しました。')
     } finally {
-      inputEl.value = ''
       setBusy(false)
+      if (inputRef.current) inputRef.current.value = ''
     }
   }
 
   return (
-    <div style={{display:'grid', gap:8}}>
-      <label className="btn ok" style={{width:'fit-content'}}>
-       カードCSVを選択
-       <input ref={inputRef} type="file" accept=".csv,text/csv" onChange={onPick} hidden />
-      </label>
-      {busy && <div className="badge">読み込み中…</div>}
+    <div className="panel" style={{ display:'grid', gap:8 }}>
+      <h3 style={{ margin:'4px 0' }}>カードCSVのインポート</h3>
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".csv,text/csv"
+        onChange={onPick}
+        disabled={busy}
+        className="input"
+      />
+      <small style={{ color:'#94a3b8' }}>
+        先頭行はヘッダ、UTF-8 推奨。サポート列：
+        <code>
+          cardId, dan, dansort, name, rarity, color, kind, type, cost, counter, life, power, effect, attribute, blockicon
+        </code>
+        <br/>
+        <b>dan</b> は発売弾（OP01 等）、<b>dansort</b> はその弾内の並び順（数値）。<br/>
+        旧CSVの <code>sort</code> がある場合は自動で <code>dansort</code> として扱います。
+      </small>
     </div>
   )
 }

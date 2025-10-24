@@ -1,17 +1,22 @@
+// src/features/collect/Collect.tsx
+// 収集タブ：絞り込みは CSV の dan、並びは dansort（数値昇順）→ cardId。画像フォルダや cardId 接頭辞は不使用。
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAllCards, getOwnership, setOwnership } from '../../db'
 import type { Card } from '../../models'
 import { CardThumb } from '../../components/CardThumb'
 
-function getSetId(cardId: string) {
-  const m = cardId.match(/^[^-_]+/)
-  return m ? m[0] : 'UNKNOWN'
+// dansort の安全取得（未設定/NaN は +∞ で末尾へ）
+function getDansortValue(c: Card): number {
+  const raw: any = (c as any).dansort
+  if (raw === undefined || raw === null || raw === '') return Number.POSITIVE_INFINITY
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw), 10)
+  return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY
 }
 
 export const Collect: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
   const [own, setOwn] = useState<Record<string, number>>({})
-  const [qSet, setQSet] = useState<string>('ALL')  // OP01/OP02…
+  const [qSet, setQSet] = useState<string>('OP01') // ★ 既定は OP01
   const [busy, setBusy] = useState(false)
 
   // Pager
@@ -24,29 +29,62 @@ export const Collect: React.FC = () => {
     ;(async () => {
       const cs = await getAllCards()
       setCards(cs)
+
+      // 所持キャッシュ
       const m: Record<string, number> = {}
       for (const c of cs) {
         const ow = await getOwnership(c.cardId)
         if (ow) m[c.cardId] = ow.count
       }
       setOwn(m)
+
       setBusy(false)
     })()
   }, [])
 
+  // 絞り込み候補：CSV の dan 列からのみ生成（空/未設定は除外）
   const setOptions = useMemo(() => {
     const s = new Set<string>()
-    for (const c of cards) s.add(getSetId(c.cardId))
+    for (const c of cards) {
+      const dan = (c as any).dan
+      if (dan) s.add(String(dan))
+    }
+    // 'ALL' 先頭＋昇順
     return ['ALL', ...Array.from(s).sort()]
   }, [cards])
 
+  // OP01 が存在しないデータの場合は安全にフォールバック
+  useEffect(() => {
+    if (!cards.length) return
+    const allDan = new Set(
+      cards.map(c => (c as any).dan).filter((v): v is string => !!v)
+    )
+    if (qSet !== 'ALL' && !allDan.has(qSet)) {
+      setQSet(allDan.has('OP01') ? 'OP01' : 'ALL')
+    }
+  }, [cards]) // qSetはユーザー操作に任せる
+
+  // 絞り込み＆並び替え：dan → dansort → cardId
   const filtered = useMemo(() => {
     let list = cards
-    if (qSet !== 'ALL') list = list.filter(c => getSetId(c.cardId) === qSet)
-    return [...list].sort((a,b)=> a.cardId.localeCompare(b.cardId,'ja'))
+
+    if (qSet !== 'ALL') {
+      list = list.filter(c => String((c as any).dan || '') === qSet)
+      list = [...list].sort((a, b) => {
+        const da = getDansortValue(a)
+        const db = getDansortValue(b)
+        if (da !== db) return da - db
+        return a.cardId.localeCompare(b.cardId, 'ja')
+      })
+    } else {
+      // ALL の時は cardId で安定ソート
+      list = [...list].sort((a, b) => a.cardId.localeCompare(b.cardId, 'ja'))
+    }
+
+    return list
   }, [cards, qSet])
 
-  // ★ 絞り込み後の所持数
+  // 絞り込み後の所持数
   const ownedFiltered = useMemo(() => {
     if (!filtered.length) return 0
     let n = 0
@@ -57,7 +95,7 @@ export const Collect: React.FC = () => {
   }, [filtered, own])
 
   const pages = Math.max(1, Math.ceil(filtered.length / perPage))
-  const pageCards = (p: number) => filtered.slice(p*perPage, p*perPage + perPage)
+  const pageCards = (p: number) => filtered.slice(p * perPage, p * perPage + perPage)
 
   async function toggle(cardId: string) {
     const cur = own[cardId] ?? 0
@@ -82,25 +120,29 @@ export const Collect: React.FC = () => {
 
   return (
     <section className="collect">
-      <div className="grid" style={{ gridTemplateColumns:'1fr auto', alignItems:'center' }}>
-        <h2 style={{margin:0}}>
+      <div className="grid" style={{ gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
+        <h2 style={{ margin: 0 }}>
           収集：所持 {ownedFiltered} / {filtered.length}
           {filtered.length > 0 && (
-            <span style={{marginLeft:8, color:'#94a3b8'}}>
-              ({Math.round((ownedFiltered/filtered.length)*100)}%)
+            <span style={{ marginLeft: 8, color: '#94a3b8' }}>
+              ({Math.round((ownedFiltered / filtered.length) * 100)}%)
             </span>
           )}
         </h2>
         <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
-          {setOptions.map(s => <option key={s} value={s}>{s}</option>)}
+          {setOptions.map(s => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
         </select>
       </div>
 
-      {busy && <div style={{marginTop:8}}>読み込み中…</div>}
+      {busy && <div style={{ marginTop: 8 }}>読み込み中…</div>}
 
       {/* 横スクロール・スナップ（ボタンなし、スワイプのみ） */}
       <div className="pager" ref={pagerRef} onScroll={onScroll}>
-        {Array.from({length: pages}).map((_, i) => (
+        {Array.from({ length: pages }).map((_, i) => (
           <div className="page" key={i}>
             <div className="collect-grid">
               {pageCards(i).map(c => {
@@ -119,21 +161,24 @@ export const Collect: React.FC = () => {
                 )
               })}
               {/* 3x3に満たない最終ページの穴埋め */}
-              {Array.from({length: Math.max(0, perPage - pageCards(i).length)}).map((_, k) =>
+              {Array.from({ length: Math.max(0, perPage - pageCards(i).length) }).map((_, k) => (
                 <div key={`pad-${k}`} className="collect-item pad" />
-              )}
+              ))}
             </div>
           </div>
         ))}
       </div>
 
       {/* ページインジケーター（ドット） */}
-      <div style={{marginTop:8, display:'flex', justifyContent:'center', gap:6}}>
-        {Array.from({length: pages}).map((_, i) => (
-          <span key={i}
+      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center', gap: 6 }}>
+        {Array.from({ length: pages }).map((_, i) => (
+          <span
+            key={i}
             style={{
-              width: 6, height: 6, borderRadius: 9999,
-              background: i===page ? '#38bdf8' : '#334155'
+              width: 6,
+              height: 6,
+              borderRadius: 9999,
+              background: i === page ? '#38bdf8' : '#334155',
             }}
           />
         ))}

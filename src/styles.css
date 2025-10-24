@@ -333,3 +333,4 @@ body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
 @media (max-width: 420px){
   .collect-grid{ gap: 6px }
 }
+

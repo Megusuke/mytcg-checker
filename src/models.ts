@@ -1,21 +1,30 @@
-// src/models.ts
+// アプリ内で扱うカード/所持データ型
 export interface Card {
-  cardId: string;      // カード番号 (例: OP01-001)
-  name: string;        // カード名
-  rarity: string;      // レアリティ (C,R,SR…)
-  color: string;       // 色（赤,青,緑…）
-  kind: string;        // 種類（leader,character…）
-  type: string;        // 特徴（麦わらの一味…）
-  cost: string;        // コスト
-  counter: string;     // カウンター値
-  life: string;        // ライフ（リーダー以外は0）
-  power: string;       // パワー
-  effect: string;      // 効果
-  attribute?: string;  // 属性（打,斬,特）
-  blockicon?: string;  // ブロックアイコン
+  cardId: string;      // カード番号（キー）
+
+  // 収集タブの絞り/並びに使う列（CSV由来）
+  dan?: string;        // 発売弾（例: OP01, OP02）
+  dansort?: number;    // 弾内での並び順（数値）※未指定は末尾扱い
+
+  // 互換用（過去CSVに sort があった場合）
+  sort?: number;
+
+  // 以下は任意メタ
+  name: string;
+  rarity: string;
+  color: string;
+  kind: string;
+  type: string;
+  cost: string;
+  counter: string;
+  life: string;
+  power: string;
+  effect: string;
+  attribute?: string;
+  blockicon?: string;
 }
 
 export interface Ownership {
   cardId: string;
-  count: number;       // 所持枚数（0以上）
+  count: number;
 }
