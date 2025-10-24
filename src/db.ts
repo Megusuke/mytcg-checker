@@ -12,7 +12,7 @@ export async function getDB(): Promise<any> {
   if (_db) return _db
   _db = await openDB(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
-      // cards: 可能なら keyPath=cardId で作成
+      // cards: 可能なら keyPath=cardId で作成（既存環境では異なる可能性もある）
       if (!db.objectStoreNames.contains('cards')) {
         db.createObjectStore('cards', { keyPath: 'cardId' })
       }
@@ -52,14 +52,23 @@ export async function getAllCards(): Promise<Card[]> {
 }
 
 // カードを一括登録/更新
-// ★ keyPath 無し（out-of-line）の環境でも動くよう、明示キーを渡す
+// ストアの keyPath の有無で put の呼び方を切り替えて安全に保存する
 export async function putCards(cards: Card[]): Promise<void> {
   if (!cards?.length) return
   const db = await getDB()
   const tx = db.transaction('cards', 'readwrite')
+  const store = tx.store as any
+  const hasInlineKey = !!store.keyPath
+
   for (const c of cards) {
-    // key=cardId を明示（既存ストアが keyPath でも out-of-line でもOK）
-    await tx.store.put(c, (c as any).cardId)
+    const key = (c as any).cardId
+    if (hasInlineKey) {
+      // inline key（keyPathあり）→ key は渡さない
+      await store.put(c)
+    } else {
+      // out-of-line key（keyPathなし）→ key を明示
+      await store.put(c, key)
+    }
   }
   await tx.done
 }
@@ -79,11 +88,19 @@ export async function getOwnership(cardId: string): Promise<Ownership | undefine
   return v as Ownership | undefined
 }
 
-// ★ 念のため ownership もキー引数を明示
+// 所持枚数の保存（keyPath の有無を判定）
 export async function setOwnership(cardId: string, count: number): Promise<void> {
   const db = await getDB()
   const tx = db.transaction('ownership', 'readwrite')
-  await tx.store.put({ cardId, count } as Ownership, cardId)
+  const store = tx.store as any
+  const hasInlineKey = !!store.keyPath
+  const value = { cardId, count } as Ownership
+
+  if (hasInlineKey) {
+    await store.put(value)
+  } else {
+    await store.put(value, cardId)
+  }
   await tx.done
 }
 
@@ -102,12 +119,20 @@ export async function getAllOwnership(): Promise<Record<string, number>> {
   return map
 }
 
-// 便利: まとめて上書き
+// 便利: まとめて上書き（keyPath 有無に対応）
 export async function putOwnershipBulk(map: Record<string, number>): Promise<void> {
   const db = await getDB()
   const tx = db.transaction('ownership', 'readwrite')
+  const store = tx.store as any
+  const hasInlineKey = !!store.keyPath
+
   for (const [cardId, count] of Object.entries(map)) {
-    await tx.store.put({ cardId, count } as Ownership, cardId)
+    const value = { cardId, count } as Ownership
+    if (hasInlineKey) {
+      await store.put(value)
+    } else {
+      await store.put(value, cardId)
+    }
   }
   await tx.done
 }
