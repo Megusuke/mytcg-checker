@@ -1,49 +1,49 @@
-import React, { useEffect, useState } from 'react'
-import { getDB } from '../../db'
+import { useEffect, useState } from 'react'
+import { getAllCards } from '../../db'
+import type { Card } from '../../models'
 import { CardThumb } from '../../components/CardThumb'
 
-function extractCardIdFromKey(key: string) {
-  const m = key.match(/^image-thumb:(.+)$/)
-  return m ? m[1] : null
-}
-
 export const Gallery: React.FC = () => {
-  const [cardIds, setCardIds] = useState<string[]>([])
+  const [cards, setCards] = useState<Card[]>([])
+  const [q, setQ] = useState<string>('')
 
   useEffect(() => {
-    let mounted = true
     ;(async () => {
-      const db = await getDB()
-      const tx = db.transaction('images')
-      const keys = await tx.store.getAllKeys()
-      const ids = keys
-        .map(k => extractCardIdFromKey(String(k)))
-        .filter((x): x is string => !!x)
-        .sort()
-      if (mounted) setCardIds(ids)
+      const cs = await getAllCards()
+      setCards(cs)
     })()
-    return () => { mounted = false }
   }, [])
 
-  if (!cardIds.length) {
-    return <p>まだサムネがありません。画像ZIPを取り込んでください。</p>
-  }
+  const filtered = cards.filter((c: Card) => {
+    if (!q.trim()) return true
+    const t = q.trim().toLowerCase()
+    return (
+      c.cardId.toLowerCase().includes(t) ||
+      (c.name ?? '').toLowerCase().includes(t) ||
+      (c.type ?? '').toLowerCase().includes(t)
+    )
+  })
 
   return (
-    <div>
-      <h2>サムネ一覧（{cardIds.length}件）</h2>
-      <div style={{
-        display:'grid',
-        gridTemplateColumns:'repeat(auto-fill, minmax(120px, 1fr))',
-        gap:12
-      }}>
-        {cardIds.map(id => (
-          <div key={id} style={{display:'grid', gap:6, justifyItems:'center'}}>
-            <CardThumb cardId={id} />
-            <div style={{fontSize:12, color:'#555'}}>{id}</div>
+    <section>
+      <div className="panel toolbar" style={{ display: 'grid', gap: 8 }}>
+        <input
+          className="input"
+          placeholder="検索（cardId / 名前 / 特徴）"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+
+      <div className="cards-grid">
+        {filtered.map((c: Card) => (
+          <div key={c.cardId} className="card tight">
+            <div className="thumb-box">
+              <CardThumb cardId={c.cardId} width="100%" />
+            </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   )
 }

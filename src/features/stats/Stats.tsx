@@ -1,77 +1,111 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import type { Card } from '../../models'
+import { useEffect, useMemo, useState } from 'react'
 import { getAllCards, getAllOwnership } from '../../db'
+import type { Card } from '../../models'
 
-// 例: "OP06-001" -> "OP06"
-function getSetId(cardId: string): string {
-  const m = cardId.match(/^[^-_]+/)
-  return m ? m[0] : 'UNKNOWN'
+type DanStats = {
+  total: number
+  owned: number
 }
 
 export const Stats: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
+  const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    (async () => {
-      const [cs, owns] = await Promise.all([getAllCards(), getAllOwnership()])
+    setBusy(true)
+    ;(async () => {
+      const cs = await getAllCards()
+      const om = await getAllOwnership()
       setCards(cs)
-      const map: Record<string, number> = {}
-      for (const o of owns) map[o.cardId] = o.count
-      setOwnMap(map)
+      setOwnMap(om)
+      setBusy(false)
     })()
   }, [])
 
-  const { total, ownedKinds, bySet } = useMemo(() => {
-    const total = cards.length
-    let ownedKinds = 0
-    const bySet: Record<string, { total: number; owned: number }> = {}
-
+  const totalCards = cards.length
+  const ownedDistinct = useMemo(() => {
+    let n = 0
     for (const c of cards) {
-      const setId = getSetId(c.cardId)
-      bySet[setId] ??= { total: 0, owned: 0 }
-      bySet[setId].total += 1
-
-      const cnt = ownMap[c.cardId] ?? 0
-      if (cnt > 0) {
-        ownedKinds += 1
-        bySet[setId].owned += 1
-      }
+      if ((ownMap[c.cardId] ?? 0) > 0) n++
     }
-    return { total, ownedKinds, bySet }
+    return n
   }, [cards, ownMap])
 
-  const overall = total ? Math.round((ownedKinds / total) * 100) : 0
-  const setRows = Object.entries(bySet)
-    .map(([setId, v]) => ({ setId, ...v, pct: v.total ? Math.round((v.owned / v.total) * 100) : 0 }))
-    .sort((a, b) => a.setId.localeCompare(b.setId))
+  // dan 別の集計（CSVの dan 列。無い場合は 'UNKNOWN'）
+  const byDan = useMemo(() => {
+    const acc = new Map<string, DanStats>()
+    for (const c of cards) {
+      const dan = (c as any).dan ? String((c as any).dan) : 'UNKNOWN'
+      const s = acc.get(dan) ?? { total: 0, owned: 0 }
+      s.total += 1
+      if ((ownMap[c.cardId] ?? 0) > 0) s.owned += 1
+      acc.set(dan, s)
+    }
+    // 表示用に並べ替え（UNKNOWN は最後）
+    const entries = Array.from(acc.entries()).sort((a, b) => {
+      const [ka] = a
+      const [kb] = b
+      if (ka === 'UNKNOWN' && kb !== 'UNKNOWN') return 1
+      if (kb === 'UNKNOWN' && ka !== 'UNKNOWN') return -1
+      return ka.localeCompare(kb, 'ja')
+    })
+    return entries
+  }, [cards, ownMap])
+
+  const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0)
 
   return (
     <section>
-      <h2>統計</h2>
-      <div style={{margin:'8px 0'}}>
-        <strong>全体所持率:</strong> {ownedKinds} / {total}（{overall}%）
-        <div style={{height:10, background:'#eee', borderRadius:6, overflow:'hidden', marginTop:6}}>
-          <div style={{height:'100%', width:`${overall}%`}} />
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="panel">
+          <h3 style={{ margin: '4px 0 8px' }}>全体</h3>
+          {busy ? (
+            <div>集計中…</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 6 }}>
+              <div>総カード数：{totalCards}</div>
+              <div>所持枚数（種類）：{ownedDistinct}</div>
+              <div>
+                所持率：{pct(ownedDistinct, totalCards)}%
+                <div className="progress" style={{ marginTop: 6 }}>
+                  <div
+                    className="fill"
+                    style={{ width: `${pct(ownedDistinct, totalCards)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
 
-      <h3 style={{marginTop:16}}>セット別</h3>
-      <div style={{display:'grid', gridTemplateColumns:'1fr auto auto auto', gap:8, alignItems:'center', maxWidth:520}}>
-        <div style={{fontWeight:600}}>セット</div>
-        <div style={{textAlign:'right', fontWeight:600}}>所持</div>
-        <div style={{textAlign:'right', fontWeight:600}}>総数</div>
-        <div style={{textAlign:'right', fontWeight:600}}>達成率</div>
-
-        {setRows.map(r => (
-          <React.Fragment key={r.setId}>
-            <div>{r.setId}</div>
-            <div style={{textAlign:'right'}}>{r.owned}</div>
-            <div style={{textAlign:'right'}}>{r.total}</div>
-            <div style={{textAlign:'right'}}>{r.pct}%</div>
-          </React.Fragment>
-        ))}
-        {!setRows.length && <div style={{gridColumn:'1 / -1'}}>カードがありません。CSVを取り込んでください。</div>}
+        <div className="panel">
+          <h3 style={{ margin: '4px 0 8px' }}>弾別（dan）</h3>
+          {busy ? (
+            <div>集計中…</div>
+          ) : byDan.length === 0 ? (
+            <div>データがありません。</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {byDan.map(([dan, s]) => (
+                <div key={dan}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div>
+                      <span className="badge" style={{ marginRight: 8 }}>{dan}</span>
+                      {s.owned} / {s.total}（{pct(s.owned, s.total)}%）
+                    </div>
+                  </div>
+                  <div className="progress" style={{ marginTop: 6 }}>
+                    <div
+                      className="fill"
+                      style={{ width: `${pct(s.owned, s.total)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </section>
   )
