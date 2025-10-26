@@ -1,55 +1,58 @@
+// 画像を display:block で描画し、URLが無い間は <img> 自体を出さない
 import { useEffect, useState } from 'react'
-import { getDB } from '../db'
+import { getImageBlobByKey } from '../db'
 
-export function CardThumb({ cardId, width = '100%' }: { cardId: string; width?: number | string }) {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null)
-  const [origUrl, setOrigUrl]   = useState<string | null>(null)
+type Props = {
+  cardId: string
+  width?: string | number // "100%" 推奨
+}
+
+export const CardThumb: React.FC<Props> = ({ cardId, width = '100%' }) => {
+  const [url, setUrl] = useState<string | null>(null)
 
   useEffect(() => {
-    let tUrl: string | null = null
-    let oUrl: string | null = null
-    let mounted = true
+    let currentUrl: string | null = null
+    let canceled = false
+
     ;(async () => {
-      const db = await getDB()
-      const thumb = await db.get('images', `image-thumb:${cardId}`)
-      const orig  = await db.get('images', `image-original:${cardId}`)
-      if (!mounted) return
-      if (thumb) { tUrl = URL.createObjectURL(thumb); setThumbUrl(tUrl) }
-      if (orig)  { oUrl = URL.createObjectURL(orig);  setOrigUrl(oUrl)  }
+      const blob =
+        (await getImageBlobByKey(`image-thumb:${cardId}`)) ||
+        (await getImageBlobByKey(`image-original:${cardId}`))
+      if (canceled) return
+      if (!blob) {
+        setUrl(null)
+        return
+        }
+      currentUrl = URL.createObjectURL(blob)
+      setUrl(currentUrl)
     })()
+
     return () => {
-      mounted = false
-      if (tUrl) URL.revokeObjectURL(tUrl)
-      if (oUrl) URL.revokeObjectURL(oUrl)
+      canceled = true
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl)
+        currentUrl = null
+      }
     }
   }, [cardId])
 
+  // URL 未準備の間は img を出さない（空文字は出さない）
+  if (!url) {
+    // 必要ならプレースホルダを返す（高さ確保したい場合は適宜）
+    return <div style={{ width: typeof width === 'number' ? `${width}px` : width }} />
+  }
+
   return (
-    <div
+    <img
+      src={url ?? undefined}     // 空文字は渡さない
+      alt={cardId}
       style={{
-        width,
-        aspectRatio: '63 / 88',          // ワンピースカードの縦横比に近い
-        background: 'transparent',
-        border: '1px solid #1e293b',
-        borderRadius: 8,
-        overflow: 'hidden',
-        display: 'grid',
-        placeItems: 'center',
+        display: 'block',        // 右下の謎の隙間を消す
+        width: typeof width === 'number' ? `${width}px` : width,
+        height: 'auto',
+        objectFit: 'contain',    // カード全体が見えるように（切り抜かない）
       }}
-    >
-      {(thumbUrl || origUrl) ? (
-        <img
-          src={thumbUrl ?? origUrl!}
-          // ★ Retina(2x) では原本を使わせる（即画質改善）
-          srcSet={origUrl ? `${thumbUrl ?? origUrl} 1x, ${origUrl} 2x` : undefined}
-          sizes="100vw"
-          alt={cardId}
-          loading="lazy"
-          style={{ width:'100%', height:'100%', objectFit:'contain', display:'block' }}
-        />
-      ) : (
-        <div style={{opacity:.4, fontSize:12, color:'#94a3b8'}}>No Image</div>
-      )}
-    </div>
+      draggable={false}
+    />
   )
 }

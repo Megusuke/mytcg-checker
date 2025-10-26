@@ -334,3 +334,43 @@ body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
   .collect-grid{ gap: 6px }
 }
 
+/* 画像セル内の余白を完全になくす */
+.card.tight { padding: 0; }
+.card.tight .thumb-box { padding: 0; margin: 0; }
+
+/* 画像を包む thumb-box が block でフル幅を使えるように */
+.thumb-box { display: block; }
+
+/* グリッド間の隙間だけ残して、内側はぴったりに */
+.cards-grid .card.tight {
+  border-radius: 12px;      /* 見た目キープ用（任意） */
+  overflow: hidden;         /* 角丸に画像をフィット */
+}
+/* 検索グリッドの「画像だけカード」ではグリッドをやめて隙間ゼロに */
+.card.tight{
+  display: block !important;          /* ← 2カラムgridを停止 */
+  grid-template-columns: unset !important;
+  padding: 0 !important;
+}
+
+/* 画像まわりの余白をゼロに */
+.card.tight .thumb-box{
+  display: block;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+}
+
+/* 画像をセルいっぱいに、余白や行内隙間なしで表示 */
+.card.tight .thumb-box img{
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;                 /* 全体を見せる */
+}
+
+/* ボタン由来のデフォルト余白を抑制（検索タブでカード=buttonにしているため） */
+.cards-grid .card.tight{
+  border: none;                        /* 任意。枠が不要なら */
+  box-shadow: none;                    /* 任意 */
+}

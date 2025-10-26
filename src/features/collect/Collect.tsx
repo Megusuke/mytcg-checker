@@ -1,9 +1,12 @@
-// src/features/collect/Collect.tsx
-// 収集タブ：絞り込みは CSV の dan、並びは dansort（数値昇順）→ cardId。画像フォルダや cardId 接頭辞は不使用。
+// 収集タブ：絞り込みは CSV の dan、並びは dansort（数値昇順）→ cardId。
+// 「ALL」は廃止。localStorage から qSet を復元し、候補が揃い次第、OP01 があれば OP01、無ければ先頭にフォールバック。
+
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAllCards, getOwnership, setOwnership } from '../../db'
 import type { Card } from '../../models'
 import { CardThumb } from '../../components/CardThumb'
+
+const LS_COLLECT_SET_KEY = 'collect.qSet'
 
 // dansort の安全取得（未設定/NaN は +∞ で末尾へ）
 function getDansortValue(c: Card): number {
@@ -16,7 +19,7 @@ function getDansortValue(c: Card): number {
 export const Collect: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
   const [own, setOwn] = useState<Record<string, number>>({})
-  const [qSet, setQSet] = useState<string>('OP01') // ★ 既定は OP01
+  const [qSet, setQSet] = useState<string>('')   // ← ALLは無し。空で開始し復元/確定後にセット
   const [busy, setBusy] = useState(false)
 
   // Pager
@@ -24,63 +27,77 @@ export const Collect: React.FC = () => {
   const pagerRef = useRef<HTMLDivElement>(null)
   const [page, setPage] = useState(0)
 
+  // 復元一回きり検証フラグ
+  const validatedOnceRef = useRef(false)
+
+  // 初期復元
+  useEffect(() => {
+    try {
+      const s0 = localStorage.getItem(LS_COLLECT_SET_KEY)
+      if (s0) setQSet(s0)
+    } catch {}
+  }, [])
+
+  // 変更時に保存
+  useEffect(() => {
+    try { if (qSet) localStorage.setItem(LS_COLLECT_SET_KEY, qSet) } catch {}
+  }, [qSet])
+
+  // データロード
   useEffect(() => {
     setBusy(true)
     ;(async () => {
       const cs = await getAllCards()
       setCards(cs)
 
-      // 所持キャッシュ
       const m: Record<string, number> = {}
       for (const c of cs) {
         const ow = await getOwnership(c.cardId)
         if (ow) m[c.cardId] = ow.count
       }
       setOwn(m)
-
       setBusy(false)
     })()
   }, [])
 
-  // 絞り込み候補：CSV の dan 列からのみ生成（空/未設定は除外）
+  // 絞り込み候補：CSV の dan 列から生成（空/未設定は除外、ALL無し）
   const setOptions = useMemo(() => {
     const s = new Set<string>()
     for (const c of cards) {
       const dan = (c as any).dan
       if (dan) s.add(String(dan))
     }
-    // 'ALL' 先頭＋昇順
-    return ['ALL', ...Array.from(s).sort()]
+    return Array.from(s).sort()
   }, [cards])
 
-  // OP01 が存在しないデータの場合は安全にフォールバック
+  // 候補が出そろってから一度だけ qSet を検証
+  // 1) 未設定 → 'OP01' があれば OP01、無ければ先頭
+  // 2) 保存値が候補に無ければ 1) と同じ
   useEffect(() => {
+    if (validatedOnceRef.current) return
     if (!cards.length) return
-    const allDan = new Set(
-      cards.map(c => (c as any).dan).filter((v): v is string => !!v)
-    )
-    if (qSet !== 'ALL' && !allDan.has(qSet)) {
-      setQSet(allDan.has('OP01') ? 'OP01' : 'ALL')
-    }
-  }, [cards]) // qSetはユーザー操作に任せる
+    if (setOptions.length === 0) return
 
-  // 絞り込み＆並び替え：dan → dansort → cardId
+    const avail = new Set(setOptions)
+    const pickDefault = () => (avail.has('OP01') ? 'OP01' : setOptions[0])
+
+    if (!qSet || !avail.has(qSet)) {
+      setQSet(pickDefault())
+    }
+    validatedOnceRef.current = true
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, setOptions])
+
+  // セット未確定の瞬間は空
   const filtered = useMemo(() => {
-    let list = cards
-
-    if (qSet !== 'ALL') {
-      list = list.filter(c => String((c as any).dan || '') === qSet)
-      list = [...list].sort((a, b) => {
-        const da = getDansortValue(a)
-        const db = getDansortValue(b)
-        if (da !== db) return da - db
-        return a.cardId.localeCompare(b.cardId, 'ja')
-      })
-    } else {
-      // ALL の時は cardId で安定ソート
-      list = [...list].sort((a, b) => a.cardId.localeCompare(b.cardId, 'ja'))
-    }
-
+    if (!qSet) return []
+    let list = cards.filter(c => String((c as any).dan || '') === qSet)
+    list = [...list].sort((a, b) => {
+      const da = getDansortValue(a)
+      const db = getDansortValue(b)
+      if (da !== db) return da - db
+      return a.cardId.localeCompare(b.cardId, 'ja')
+    })
     return list
   }, [cards, qSet])
 
@@ -118,6 +135,8 @@ export const Collect: React.FC = () => {
     if (el) el.scrollTo({ left: 0, behavior: 'auto' })
   }, [qSet])
 
+  const selectDisabled = setOptions.length === 0 || !qSet
+
   return (
     <section className="collect">
       <div className="grid" style={{ gridTemplateColumns: '1fr auto', alignItems: 'center' }}>
@@ -129,11 +148,14 @@ export const Collect: React.FC = () => {
             </span>
           )}
         </h2>
-        <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
+        <select
+          className="select"
+          value={qSet || ''}
+          disabled={selectDisabled}
+          onChange={e => setQSet(e.target.value)}
+        >
           {setOptions.map(s => (
-            <option key={s} value={s}>
-              {s}
-            </option>
+            <option key={s} value={s}>{s}</option>
           ))}
         </select>
       </div>
