@@ -374,3 +374,35 @@ body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
   border: none;                        /* 任意。枠が不要なら */
   box-shadow: none;                    /* 任意 */
 }
+
+/* ===== 検索タブ スクロール分離 ===== */
+
+/* 全体：縦にヘッダー＋本文 */
+.search-pane {
+  display: flex;
+  flex-direction: column;
+  /* 画面の高さから、上のヘッダ類(タイトル/タブ/パディング)を引いて確保するイメージ */
+  min-height: calc(100vh - 120px);
+  /* iOSの下余白も考慮 */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* フィルタ行（検索欄 / セット / 未所持のみ） */
+.search-pane-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  /* 既存の .toolbar の見た目を崩さないように */
+  background: var(--panel);
+  border-bottom: 1px solid #1e293b;
+}
+
+/* カード一覧のスクロール領域 */
+.cards-scroll-area {
+  flex: 1;
+  min-height: 0;         /* これがないとflex子がオーバーフローしがち */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* iOSで慣性スクロール */
+  padding-bottom: 16px;
+}
