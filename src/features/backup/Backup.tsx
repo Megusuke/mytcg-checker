@@ -1,139 +1,155 @@
+// src/features/backup/Backup.tsx
+//
+// 所持状況(ownership)だけをテキストでバックアップ/復元する簡易ツール。
+// iPhoneのPWA環境でも確実に使えるように、ファイルダウンロードではなく
+// テキストのコピー＆貼り付けでやり取りする方式。
+// 通知は alert() で行い、トーストに依存しない。
+
 import React, { useState } from 'react'
-import { zip, unzip } from 'fflate'
-import { getAllCards, getAllOwnership, getAllImageKeys, getImageBlobByKey, clearAllStores, putCards, putOwnershipBulk } from '../../db'
-import { guessMime, makeThumbnail } from '../../utils/images'
-import { useToast } from '../../components/Toaster'
+import { getAllOwnership, setOwnership } from '../../db'
 
-// バイナリ→ダウンロード
-function downloadBlob(data: Blob, filename: string) {
-  const url = URL.createObjectURL(data)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
-}
-
-// Blob -> Uint8Array
-async function blobToUint8(blob: Blob): Promise<Uint8Array> {
-  return new Uint8Array(await blob.arrayBuffer())
-}
+// Ownership のイメージ：
+// getAllOwnership() は { [cardId: string]: number } を返す想定。
+// setOwnership(cardId, count) で1件ずつ書き戻せる想定。
 
 export const Backup: React.FC = () => {
-  const [busy, setBusy] = useState<null | string>(null)
-  const toast = useToast()
-  
-  async function onExport() {
+  // export / import 用のテキストエリア中身
+  const [textData, setTextData] = useState('')
+
+  // 進行中フラグ
+  const [busyExport, setBusyExport] = useState(false)
+  const [busyImport, setBusyImport] = useState(false)
+
+  // 所持状況をJSON文字列として textData に出力
+  async function handleExport() {
     try {
-      setBusy('エクスポート中...')
-      // 1) JSONデータ
-      const [cards, ownership] = await Promise.all([getAllCards(), getAllOwnership()])
-      const dataJson = new TextEncoder().encode(JSON.stringify({ cards, ownership }, null, 2))
+      setBusyExport(true)
 
-      // 2) 画像（原本のみ）
-      const files: Record<string, Uint8Array> = { 'data.json': dataJson }
-      const keys = await getAllImageKeys()
-      let done = 0
-      for (const key of keys) {
-        const m = key.match(/^image-original:(.+)$/)
-        if (!m) continue
-        const cardId = m[1]
-        const blob = await getImageBlobByKey(key)
-        if (!blob) continue
-        files[`images/${cardId}.jpg`] = await blobToUint8(blob)
-        // UI更新のために少しゆるめる
-        done++
-        if (done % 50 === 0) await new Promise(r => setTimeout(r))
-      }
+      // 1. IndexedDBから ownership 全件をとる
+      const map = await getAllOwnership()
+      // map は { [cardId: string]: number }
 
-      // 3) ZIP生成
-      const zipped = await new Promise<Uint8Array>((resolve, reject) => {
-        zip(files, (err, data) => (err ? reject(err) : resolve(data)))
-      })
+      // 2. 扱いやすい配列へ {cardId,count}[]
+      const arr = Object.entries(map).map(([cardId, count]) => ({
+        cardId,
+        count,
+      }))
 
-      downloadBlob(new Blob([new Uint8Array(zipped)], { type: 'application/zip' }), 'opcg-backup.zip')
-      setBusy(null)
-      // 成功時:
-      toast({ text: 'バックアップZIPを保存しました', type:'ok' })
-    } catch (e) {
+      // 3. JSON文字列に
+      //    - 見やすいようインデント2で整形
+      const jsonStr = JSON.stringify(
+        {
+          version: 1,        // 将来拡張用
+          exportedAt: Date.now(),
+          ownership: arr,    // [{cardId,count}, ...]
+        },
+        null,
+        2
+      )
+
+      setTextData(jsonStr)
+      alert('所持状況をエクスポートしました。このテキストをコピーして保管してください。')
+    } catch (e: any) {
       console.error(e)
-      setBusy(null)
-      // エラー時:
-      toast({ text: 'エクスポートでエラーが発生しました', type:'error' })
+      alert('エクスポートに失敗しました。')
+    } finally {
+      setBusyExport(false)
     }
   }
 
-  async function onImportZip(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.currentTarget.value = ''
-    setBusy('インポート中...')
-
+  // textData に貼られたJSONを復元
+  async function handleImport() {
     try {
-      const buf = new Uint8Array(await file.arrayBuffer())
-      const files = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
-        unzip(buf, (err, data) => (err ? reject(err) : resolve(data as Record<string, Uint8Array>)))
-      })
+      setBusyImport(true)
 
-      // 1) data.json
-      const dataJson = files['data.json']
-      if (!dataJson) throw new Error('ZIPに data.json が見つかりません')
-      const json = JSON.parse(new TextDecoder().decode(dataJson)) as { cards: any[]; ownership: any[] }
-
-      // 2) 既存データを消去（上書きモード）
-      await clearAllStores()
-
-      // 3) カード & 所持を書き込み
-      await putCards(json.cards as any)
-      await putOwnershipBulk(json.ownership as any)
-
-      // 4) 画像を復元（thumbは再生成）
-      const imageEntries = Object.entries(files).filter(([name]) => /^images\/.+\.(jpe?g|png|webp)$/i.test(name))
-      let done = 0
-      for (const [name, bytes] of imageEntries) {
-        const base = name.replace(/^images\//, '')
-        const cardId = base.replace(/\.[^.]+$/, '')
-        const blob = new Blob([new Uint8Array(bytes)], { type: guessMime(name) })
-        // thumb再生成
-        const thumb = await makeThumbnail(blob, 220)
-
-        // IndexedDBへ保存
-        const { getDB } = await import('../../db')
-        const db = await getDB()
-        const tx = db.transaction('images', 'readwrite')
-        await tx.store.put(blob,  `image-original:${cardId}`)
-        await tx.store.put(thumb, `image-thumb:${cardId}`)
-        await tx.done
-
-        done++
-        if (done % 50 === 0) await new Promise(r => setTimeout(r))
+      if (!textData.trim()) {
+        alert('復元データが空です。')
+        return
       }
 
-      setBusy(null)
-      alert('バックアップZIPを復元しました')
-    } catch (e) {
+      let parsed: any
+      try {
+        parsed = JSON.parse(textData)
+      } catch (e) {
+        alert('JSONとして読み込めませんでした。')
+        return
+      }
+
+      // 期待フォーマット: { version:1, ownership:[{cardId,count}, ...] }
+      if (!parsed || !Array.isArray(parsed.ownership)) {
+        alert('フォーマットが不正です。')
+        return
+      }
+
+      const list: { cardId: string; count: number }[] = parsed.ownership
+
+      // 1件ずつDBへ書き戻し
+      for (const item of list) {
+        if (!item || typeof item.cardId !== 'string') continue
+        const c = typeof item.count === 'number' && item.count >= 0 ? item.count : 0
+        await setOwnership(item.cardId, c)
+      }
+
+      alert('所持状況を復元しました。')
+    } catch (e: any) {
       console.error(e)
-      setBusy(null)
-      alert('インポートでエラーが発生しました')
+      alert('復元に失敗しました。')
+    } finally {
+      setBusyImport(false)
     }
   }
 
   return (
-    <section>
-      <h2>バックアップ</h2>
-      <div style={{display:'flex', gap:12, flexWrap:'wrap'}}>
-        <button onClick={onExport} disabled={!!busy}>全データをZIPでエクスポート</button>
-        <label style={{display:'inline-block'}}>
-          <span style={{display:'inline-block', padding:'6px 10px', background:'#334155', color:'#fff', borderRadius:6, cursor:'pointer', opacity: busy ? .6 : 1}}>
-            ZIPからインポート
-          </span>
-          <input type="file" accept=".zip,application/zip" onChange={onImportZip} hidden />
-        </label>
+    <div className="panel" style={{ display:'grid', gap:12 }}>
+      <h2 style={{ margin:'0 0 4px' }}>バックアップ / 復元（所持状況のみ）</h2>
+
+      <p style={{margin:0, fontSize:13, lineHeight:1.5, color:'var(--muted)'}}>
+        ・「エクスポート」を押すと、現在の所持枚数データ（どのカードを何枚持っているか）が
+        下のテキストエリアにJSONとして表示されます。<br/>
+        ・その文字列をメモ帳やメール等にコピーして保存してください。<br/>
+        ・復元したいときは、保存しておいたJSON文字列を貼り付けて「復元」を押します。<br/>
+        ・画像やカード一覧マスタは含みません（CSV/ZIPはこれまで通りインポートしてください）。
+      </p>
+
+      <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
+        <button
+          className="btn"
+          onClick={handleExport}
+          disabled={busyExport}
+          style={{flex:'0 0 auto'}}
+        >
+          {busyExport ? 'エクスポート中…' : '所持状況をエクスポート'}
+        </button>
+
+        <button
+          className="btn ok"
+          onClick={handleImport}
+          disabled={busyImport}
+          style={{flex:'0 0 auto'}}
+        >
+          {busyImport ? '復元中…' : 'テキストから復元'}
+        </button>
       </div>
-      {busy && <div style={{marginTop:8}}>{busy}</div>}
-      <small style={{display:'block', marginTop:8, color:'#555'}}>
-        ※ エクスポートには cards / ownership / images（原本）が含まれます。サムネイルは復元時に再生成します。
-      </small>
-    </section>
+
+      <textarea
+        className="input"
+        style={{
+          minHeight: '140px',
+          fontFamily: 'monospace',
+          fontSize: '12px',
+          lineHeight: 1.4,
+          whiteSpace: 'pre',
+          overflowX: 'auto'
+        }}
+        placeholder={`{\n  "version":1,\n  "ownership":[{"cardId":"OP01-001","count":2}, ...]\n}`}
+        value={textData}
+        onChange={(e)=> setTextData(e.target.value)}
+      />
+
+      <div style={{fontSize:12, color:'var(--muted)'}}>
+        注意: このバックアップは所持枚数のみです。カード画像やカード名リストは含みません。
+        それらは今までどおりCSVインポート、ZIPインポートで復元してください。
+      </div>
+    </div>
   )
 }
