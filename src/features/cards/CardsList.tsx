@@ -1,250 +1,176 @@
-// 検索タブ：画像のみの5列グリッド。タップで拡大＋所持カウンタ。
-// スクロール改善版：フィルタ部分は固定、カード一覧だけ縦スクロール。
-
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
-import { getAllCards, getAllOwnership, setOwnership } from '../../db'
+import React, { useEffect, useMemo, useState } from 'react'
+import { getAllCards, getOwnership, setOwnership } from '../../db'
 import type { Card } from '../../models'
 import { CardThumb } from '../../components/CardThumb'
 
-const LS_Q_KEY = 'search.q'
-const LS_SET_KEY = 'search.qSet'
-const LS_UNOWNED_KEY = 'search.onlyUnowned'
+/**
+ * 並び替え：
+ * - まず dansort（数値として比較できれば数値、できなければ文字列比較）
+ * - 同一 dansort のときは cardId で安定ソート
+ */
+function compareDansort(a: Card, b: Card): number {
+  const ax = (a as any).dansort ?? ''
+  const bx = (b as any).dansort ?? ''
 
-function getSetIdFromCardId(cardId: string) {
-  const m = cardId.match(/^[^-_]+/)
-  return m ? m[0] : 'UNKNOWN'
+  const an = Number(ax)
+  const bn = Number(bx)
+  const aNum = !Number.isNaN(an)
+  const bNum = !Number.isNaN(bn)
+
+  if (aNum && bNum) {
+    if (an !== bn) return an - bn
+  } else {
+    const s = String(ax).localeCompare(String(bx), 'ja')
+    if (s !== 0) return s
+  }
+  return a.cardId.localeCompare(b.cardId, 'ja')
 }
 
 export const CardsList: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
-  const [ownMap, setOwnMap] = useState<Record<string, number>>({})
-  const [q, setQ] = useState<string>('')
-  const [qSet, setQSet] = useState<string>('')           // "ALL"なし
-  const [onlyUnowned, setOnlyUnowned] = useState<boolean>(true)
-  const [busy, setBusy] = useState(false)
+  const [qSet, setQSet] = useState<string>('')           // dan で絞り込み
+  const [viewer, setViewer] = useState<string | null>(null) // 拡大表示中の cardId
+  const [ownCount, setOwnCount] = useState<number>(0)    // 拡大中カードの所持枚数
 
-  // モーダル（拡大表示）
-  const [activeId, setActiveId] = useState<string | null>(null)
-
-  // 復元フラグ（一度だけ検証）
-  const validatedOnceRef = useRef(false)
-
-  // --- localStorage 復元（初回のみ） ---
+  // 初回ロード：カード取得、前回の絞り込み（dan）復元
   useEffect(() => {
-    try {
-      const q0 = localStorage.getItem(LS_Q_KEY)
-      const set0 = localStorage.getItem(LS_SET_KEY)
-      const un0 = localStorage.getItem(LS_UNOWNED_KEY)
-      if (q0 !== null) setQ(q0)
-      if (set0 !== null) setQSet(set0)
-      if (un0 !== null) setOnlyUnowned(un0 === '1')
-    } catch {}
-  }, [])
-
-  // --- localStorage 保存 ---
-  useEffect(() => { try { localStorage.setItem(LS_Q_KEY, q) } catch {} }, [q])
-  useEffect(() => { try { if (qSet) localStorage.setItem(LS_SET_KEY, qSet) } catch {} }, [qSet])
-  useEffect(() => { try { localStorage.setItem(LS_UNOWNED_KEY, onlyUnowned ? '1' : '0') } catch {} }, [onlyUnowned])
-
-  // --- DBロード ---
-  useEffect(() => {
-    setBusy(true)
-    ;(async () => {
+    (async () => {
       const cs = await getAllCards()
-      const om = await getAllOwnership()
       setCards(cs)
-      setOwnMap(om)
-      setBusy(false)
+
+      // 前回の絞り込み復元（なければ最初のdan）
+      const saved = localStorage.getItem('search.qSet') || ''
+      const allDans = Array.from(new Set(cs.map(c => (c as any).dan).filter(Boolean))).sort()
+      if (saved && allDans.includes(saved)) {
+        setQSet(saved)
+      } else {
+        setQSet(allDans[0] ?? '')
+      }
     })()
   }, [])
 
-  // セット候補は cardId 接頭辞から生成（ALLなし）
-  const setOptions = useMemo(() => {
+  // dan の候補一覧
+  const danOptions = useMemo(() => {
     const s = new Set<string>()
     for (const c of cards) {
-      const setId = getSetIdFromCardId(c.cardId)
-      if (setId && setId !== 'UNKNOWN') s.add(setId)
+      const d = (c as any).dan
+      if (d) s.add(String(d))
     }
     return Array.from(s).sort()
   }, [cards])
 
-  // 候補が揃ったら1回だけ qSet を正当化
-  useEffect(() => {
-    if (validatedOnceRef.current) return
-    if (!cards.length) return
-    if (setOptions.length === 0) return
-
-    const avail = new Set(setOptions)
-    if (!qSet || !avail.has(qSet)) {
-      // 保存されてない or 無効なら先頭を採用
-      setQSet(setOptions[0])
-    }
-
-    validatedOnceRef.current = true
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, setOptions])
-
-  // 絞り込み後リスト
+  // 絞り込み＋dansortでソート
   const filtered = useMemo(() => {
-    if (!qSet) return [] // セット未決定の瞬間は空
-    let list = cards.filter(c => getSetIdFromCardId(c.cardId) === qSet)
+    let list = cards
+    if (qSet) list = list.filter(c => String((c as any).dan) === qSet)
+    return [...list].sort(compareDansort)
+  }, [cards, qSet])
 
-    if (q.trim()) {
-      const t = q.trim().toLowerCase()
-      list = list.filter(c =>
-        c.cardId.toLowerCase().includes(t) ||
-        (c.name ?? '').toLowerCase().includes(t) ||
-        (c.type ?? '').toLowerCase().includes(t)
-      )
-    }
-    if (onlyUnowned) {
-      list = list.filter(c => (ownMap[c.cardId] ?? 0) <= 0)
-    }
+  // qSet を選ぶたび保存（次回起動時に復元）
+  useEffect(() => {
+    if (qSet) localStorage.setItem('search.qSet', qSet)
+  }, [qSet])
 
-    return [...list].sort((a, b) =>
-      a.cardId.localeCompare(b.cardId, 'ja')
-    )
-  }, [cards, qSet, q, onlyUnowned, ownMap])
-
-  // 所持数更新
-  async function incr(cardId: string, delta: number) {
-    const cur = ownMap[cardId] ?? 0
-    const next = Math.max(0, cur + delta)
-    await setOwnership(cardId, next)
-    setOwnMap(prev => ({ ...prev, [cardId]: next }))
+  // 画像クリックで拡大＆カウンタ取得
+  async function openViewer(cid: string) {
+    setViewer(cid)
+    const ow = await getOwnership(cid)
+    setOwnCount(ow?.count ?? 0)
   }
 
-  // モーダル制御
-  const closeModal = useCallback(() => setActiveId(null), [])
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') closeModal()
-    }
-    if (activeId) window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [activeId, closeModal])
+  async function inc() {
+    if (!viewer) return
+    const next = ownCount + 1
+    await setOwnership(viewer, next)
+    setOwnCount(next)
+  }
 
-  // セレクトの無効化状態判定
-  const selectDisabled = setOptions.length === 0 || !qSet
+  async function dec() {
+    if (!viewer) return
+    const next = Math.max(0, ownCount - 1)
+    await setOwnership(viewer, next)
+    setOwnCount(next)
+  }
 
   return (
-    <section className="search-pane">
-      {/* 上部の固定ツールバー部分 */}
-      <div className="panel toolbar toolbar-grid grid search-pane-header">
-        <input
-          className="input"
-          placeholder="カード名 / 番号 / 特徴 で検索"
-          value={q}
-          onChange={e => setQ(e.target.value)}
-        />
+    <div className="cards-list">
 
-        <select
-          className="select"
-          value={qSet || ''}
-          disabled={selectDisabled}
-          onChange={e => setQSet(e.target.value)}
-        >
-          {setOptions.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-
-        <label style={{display:'flex', alignItems:'center', gap:8}}>
-          <input
-            type="checkbox"
-            checked={onlyUnowned}
-            onChange={e => setOnlyUnowned(e.target.checked)}
-          />
-          未所持のみ
-        </label>
-      </div>
-
-      {/* 下側：カード一覧。ここだけ縦スクロール */}
-      <div className="cards-scroll-area">
-        {busy && <div style={{marginTop:8}}>読み込み中…</div>}
-
-        <div
-          className="cards-grid"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-            gap: 12,
-            marginTop: 12
-          }}
-        >
-          {filtered.map(c => {
-            const owned = (ownMap[c.cardId] ?? 0) > 0
-            return (
-              <button
-                key={c.cardId}
-                onClick={() => setActiveId(c.cardId)}
-                className={`card tight ${owned ? 'owned' : ''}`}
-                style={{ padding: 0, cursor: 'pointer' }}
-                aria-label={`${c.cardId} を拡大`}
-              >
-                <div className="thumb-box">
-                  <CardThumb cardId={c.cardId} width="100%" />
-                </div>
-              </button>
-            )
-          })}
+      {/* ツールバー：dan 絞り込みのみ（ALLは廃止方針） */}
+      <div className="toolbar" style={{position:'sticky', top:0, zIndex:5, margin:'-12px -12px 12px'}}>
+        <div className="grid toolbar-grid" style={{display:'grid', gridTemplateColumns:'1fr 200px', gap:12, alignItems:'center'}}>
+          <h2 style={{margin:0}}>検索</h2>
+          <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
+            {danOptions.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
         </div>
       </div>
 
-      {/* モーダル（拡大＋カウンタ） */}
-      {activeId && (
+      {/* 画像のみ 5列グリッド */}
+      <div className="cards-grid" style={{gridTemplateColumns: 'repeat(5, 1fr)'}}>
+        {filtered.map(c => (
+          <button
+            key={c.cardId}
+            onClick={() => openViewer(c.cardId)}
+            title={c.cardId}
+            style={{
+              display:'block',
+              padding:0,
+              background:'transparent',
+              border:'none',
+              cursor:'pointer'
+            }}
+          >
+            <CardThumb cardId={c.cardId} width="100%" />
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <div style={{opacity:.8}}>該当カードがありません</div>
+        )}
+      </div>
+
+      {/* 画像タップ時の拡大ビュー（簡易モーダル） */}
+      {viewer && (
         <div
-          role="dialog"
-          aria-modal="true"
-          onClick={closeModal}
+          onClick={() => setViewer(null)}
           style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(2,8,23,0.72)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000,
-            padding: 16
+            position:'fixed', inset:0, background:'rgba(0,0,0,.7)',
+            display:'grid', placeItems:'center', zIndex:9999, padding:16
           }}
         >
           <div
-            className="panel"
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: 'min(96vw, 520px)', maxHeight: '90vh', overflow: 'auto', padding: 12 }}
+            onClick={e => e.stopPropagation()}
+            style={{
+              background:'var(--panel)', border:'1px solid #1e293b', borderRadius:12,
+              maxWidth:'min(92vw, 900px)', width:'100%', boxShadow:'var(--shadow)', padding:12
+            }}
           >
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-              <h3 style={{ margin: 0 }}>{activeId}</h3>
-              <button className="btn neutral" onClick={closeModal}>閉じる</button>
-            </div>
-
-            <div style={{ borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
-              <CardThumb cardId={activeId} width="100%" />
-            </div>
-
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
-              <div style={{display:'flex', alignItems:'center', gap:8}}>
-                <button className="btn ghost" onClick={()=> incr(activeId, -1)}>-</button>
-                <input className="input input--num" type="number" readOnly value={ownMap[activeId] ?? 0} />
-                <button className="btn ghost" onClick={()=> incr(activeId, +1)}>+</button>
+            <div style={{display:'grid', gap:12}}>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <div style={{fontWeight:700}}>{viewer}</div>
+                <button className="btn ghost" onClick={() => setViewer(null)}>閉じる</button>
               </div>
-              {(ownMap[activeId] ?? 0) > 0 ? (
-                <button
-                  className="btn ok"
-                  onClick={()=> incr(activeId, -(ownMap[activeId] ?? 0))}
-                >
-                  所持
-                </button>
-              ) : (
-                <button
-                  className="btn neutral"
-                  onClick={()=> incr(activeId, 1)}
-                >
-                  未所持
-                </button>
-              )}
+
+              <div>
+                <CardThumb cardId={viewer} width="100%" />
+              </div>
+
+              {/* 所持枚数カウンタ */}
+              <div style={{display:'flex', alignItems:'center', gap:8, justifyContent:'center'}}>
+                <button className="btn" onClick={dec}>−</button>
+                <input
+                  className="input input--num"
+                  type="number"
+                  value={ownCount}
+                  readOnly
+                  style={{textAlign:'center'}}
+                />
+                <button className="btn" onClick={inc}>＋</button>
+              </div>
             </div>
           </div>
         </div>
       )}
-    </section>
+
+    </div>
   )
 }

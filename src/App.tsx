@@ -19,50 +19,42 @@ export default function App() {
 
         <Tabs
           tabs={[
-            { key: 'import', label: 'インポート' },
-            { key: 'search', label: '検索' },
+            { key: 'import',  label: 'インポート' },
+            { key: 'search',  label: '検索' },
             { key: 'collect', label: '収集' },
-            { key: 'stats',  label: '統計' },
+            { key: 'stats',   label: '統計' },
           ]}
           value={tab}
-          onChange={(k) => setTab(k as any)}
+          onChange={(k)=> setTab(k as any)}
         />
 
-        {/* インポート：このタブでもスクロールできるようラッパでoverflow:auto */}
         {tab === 'import' && (
-          <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto' }}>
-            <section className="panel grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
-              <div className="two-col">
-                <ImportZip />
-                <ZipDoctor />
-              </div>
-              <ImportCsv />
-              <Backup />
-            </section>
-          </div>
+          <section className="panel grid" style={{gridTemplateColumns:'1fr', gap:12}}>
+            <div className="two-col">
+              <ImportZip />
+              <ZipDoctor />
+            </div>
+            <ImportCsv />
+            <Backup />
+          </section>
         )}
 
-        {/* 検索：上部固定＋カードだけ内部スクロール（search-surfaceはCSSでflex/overflow管理） */}
         {tab === 'search' && (
           <section className="panel search-surface">
             <CardsList />
           </section>
         )}
-        
-        {/* 収集 */}
+
         {tab === 'collect' && (
           <section className="panel">
-          <Collect />
+            <Collect />
           </section>
         )}
-        
-        {/* 統計：こちらもスクロール可にしておく */}
+
         {tab === 'stats' && (
-          <div style={{ flex: '1 1 auto', minHeight: 0, overflow: 'auto' }}>
-            <section className="grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
-              <div className="panel"><Stats /></div>
-            </section>
-          </div>
+          <section className="grid" style={{gridTemplateColumns:'1fr', gap:12}}>
+            <div className="panel"><Stats /></div>
+          </section>
         )}
 
         <Toaster />
