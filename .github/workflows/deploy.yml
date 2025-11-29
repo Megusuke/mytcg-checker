@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -19,16 +19,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-+     - name: Configure Pages
-+       uses: actions/configure-pages@v5
-+       with:
-+         enablement: true
-      - run: npm ci || npm i
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v3
+          node-version: 22
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Install deps
+        run: npm ci || npm i
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
