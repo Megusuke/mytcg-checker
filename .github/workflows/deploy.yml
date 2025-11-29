@@ -35,6 +35,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      # 追加: dist の構成と index.html の <script> を確認
+      - name: Show dist tree
+        run: ls -la dist && ls -la dist/assets || true
+
+      - name: Peek index.html head
+        run: sed -n '1,120p' dist/index.html
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
