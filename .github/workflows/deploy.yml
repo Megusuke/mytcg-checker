@@ -22,7 +22,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - uses: actions/configure-pages@v5
++     - name: Configure Pages
++       uses: actions/configure-pages@v5
++       with:
++         enablement: true
       - run: npm ci || npm i
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
