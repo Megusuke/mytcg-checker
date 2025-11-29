@@ -28,7 +28,7 @@ function compareDansort(a: Card, b: Card): number {
 
 export const CardsList: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
-  const [qSet, setQSet] = useState<string>('')             // dan で絞り込み
+  const [searchCardId, setSearchCardId] = useState<string>('')  // cardId で検索
   const [onlyUnowned, setOnlyUnowned] = useState<boolean>(() => {
     // 既定は「未所持のみ = ON」。保存値があれば復元
     const saved = localStorage.getItem('search.onlyUnowned')
@@ -37,25 +37,20 @@ export const CardsList: React.FC = () => {
   const [viewer, setViewer] = useState<string | null>(null) // 拡大表示中の cardId
   const [ownCount, setOwnCount] = useState<number>(0)       // 拡大中カードの所持枚数
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
+  const [danFilter, setDanFilter] = useState<string>('')   // dan 絞り込み（空 = 無し）
 
-  // 初回ロード：カード取得、前回の絞り込み（dan）復元、所持状況読み込み
+  // 初回ロード：カード取得、前回の検索条件復元、所持状況読み込み
   useEffect(() => {
     (async () => {
       const cs = await getAllCards()
       setCards(cs)
-
-      // 前回の絞り込みを復元（なければ 'OP01'）
-      const savedDan = localStorage.getItem('search.qSet') // null if not set
-      const allDans = Array.from(new Set(cs.map(c => (c as any).dan).filter(Boolean))).sort()
-      if (savedDan !== null) {
-        // savedDan may be '' (ALL) or a valid dan value
-        if (savedDan === '' || allDans.includes(savedDan)) setQSet(savedDan)
-        else setQSet('OP01')
-      } else {
-        // no saved preference -> default to 'OP01'
-        setQSet('OP01')
-      }
-
+ 
+      // 前回の検索条件を復元
+      const savedCardId = localStorage.getItem('search.cardId') || ''
+      setSearchCardId(savedCardId)
+      const savedDan = localStorage.getItem('search.dan') || ''
+      setDanFilter(savedDan)
+ 
       // 所持情報をまとめて読み込み（並列）
       const map: Record<string, number> = {}
       await Promise.all(
@@ -68,41 +63,33 @@ export const CardsList: React.FC = () => {
     })()
   }, [])
 
-  // dan の候補一覧（重複除去、ヘッダ'dan'を除外、先頭に ALL）
-  const danOptions = useMemo(() => {
-    const s = new Set<string>()
-    for (const c of cards) {
-      const raw = (c as any).dan
-      if (!raw) continue
-      const v = String(raw).trim()
-      // CSVヘッダなどで "dan" が入るケースを除外（大/小文字両対応）
-      if (v === '') continue
-      if (v.toLowerCase() === 'dan') continue
-      s.add(v)
-    }
-    const list = Array.from(s).sort()
-    // 先頭に ALL（値は空文字 -> フィルタ無し）
-    return [''].concat(list)
-  }, [cards])
-
   // 絞り込み＋dansortでソート＋「未所持のみ」
   const filtered = useMemo(() => {
     let list = cards
-    // dan で絞り込み（空文字 = ALL なので絞り込みなし）
-    if (qSet !== '') {
-      list = list.filter(c => String((c as any).dan) === qSet)
+    // dan で絞り込み（空文字 = 絞り込み無し）
+    if (danFilter.trim() !== '') {
+      list = list.filter(c => String((c as any).dan) === danFilter)
+    }
+    // cardId で絞り込み（部分一致、大文字小文字区別なし）
+    if (searchCardId.trim() !== '') {
+      const query = searchCardId.trim().toLowerCase()
+      list = list.filter(c => c.cardId.toLowerCase().includes(query))
     }
     // 未所持のみ
     if (onlyUnowned) {
       list = list.filter(c => (ownMap[c.cardId] ?? 0) === 0)
     }
     return [...list].sort(compareDansort)
-  }, [cards, qSet, onlyUnowned, ownMap])
+  }, [cards, searchCardId, onlyUnowned, ownMap, danFilter])
 
-  // qSet / onlyUnowned を選ぶたび保存（次回起動時に復元）
+  // searchCardId を保存
   useEffect(() => {
-    localStorage.setItem('search.qSet', qSet)
-  }, [qSet])
+    localStorage.setItem('search.cardId', searchCardId)
+  }, [searchCardId])
+  // danFilter を保存
+  useEffect(() => {
+    localStorage.setItem('search.dan', danFilter)
+  }, [danFilter])
   useEffect(() => {
     localStorage.setItem('search.onlyUnowned', onlyUnowned ? '1' : '0')
   }, [onlyUnowned])
@@ -130,15 +117,43 @@ export const CardsList: React.FC = () => {
     setOwnMap(prev => ({ ...prev, [viewer]: next }))
   }
 
+  // dan の候補（重複除去、'dan'ヘッダ除外）
+  const danOptions = useMemo(() => {
+    const s = new Set<string>()
+    for (const c of cards) {
+      const raw = (c as any).dan
+      if (!raw) continue
+      const v = String(raw).trim()
+      if (v === '') continue
+      if (v.toLowerCase() === 'dan') continue
+      s.add(v)
+    }
+    return Array.from(s).sort()
+  }, [cards])
+
   return (
     <div className="cards-list">
-      {/* ツールバー：dan 絞り込み + 未所持のみ */}
+      {/* ツールバー：cardId 検索 + 未所持のみ */}
       <div className="toolbar" style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}>
         <div className="grid toolbar-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}>
           <h2 style={{ margin: 0 }}>検索</h2>
-          <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
-            {danOptions.map(d => <option key={d} value={d}>{d === '' ? 'ALL' : d}</option>)}
+          <select
+            className="select"
+            value={danFilter}
+            onChange={(e) => setDanFilter(e.target.value)}
+            style={{ padding: '8px' }}
+          >
+            <option value="">全て（danなし）</option>
+            {danOptions.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
+          <input
+            type="text"
+            className="select"
+            placeholder="CardID を入力..."
+            value={searchCardId}
+            onChange={(e) => setSearchCardId(e.target.value)}
+            style={{ padding: '8px' }}
+          />
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
               type="checkbox"
@@ -182,7 +197,48 @@ export const CardsList: React.FC = () => {
         </div>
       </div>
 
-      {/* ...existing code... */}
+      {/* 画像タップ時の拡大ビュー（簡易モーダル） */}
+      {viewer && (
+        <div
+          onClick={() => setViewer(null)}
+          style={{
+            position:'fixed', inset:0, background:'rgba(0,0,0,.7)',
+            display:'grid', placeItems:'center', zIndex:9999, padding:16
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background:'var(--panel)', border:'1px solid #1e293b', borderRadius:12,
+              maxWidth:'min(92vw, 900px)', width:'100%', boxShadow:'var(--shadow)', padding:12
+            }}
+          >
+            <div style={{display:'grid', gap:12}}>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <div style={{fontWeight:700}}>{viewer}</div>
+                <button className="btn ghost" onClick={() => setViewer(null)}>閉じる</button>
+              </div>
+
+              <div>
+                <CardThumb cardId={viewer} width="100%" />
+              </div>
+
+              {/* 所持枚数カウンタ */}
+              <div style={{display:'flex', alignItems:'center', gap:8, justifyContent:'center'}}>
+                <button className="btn" onClick={dec}>−</button>
+                <input
+                  className="input input--num"
+                  type="number"
+                  value={ownCount}
+                  readOnly
+                  style={{textAlign:'center'}}
+                />
+                <button className="btn" onClick={inc}>＋</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
