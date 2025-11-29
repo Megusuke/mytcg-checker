@@ -56,57 +56,57 @@ export const Stats: React.FC = () => {
   const pct = (n: number, d: number) => (d > 0 ? Math.round((n / d) * 100) : 0)
 
   return (
-    <section>
-      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div className="panel">
-          <h3 style={{ margin: '4px 0 8px' }}>全体</h3>
-          {busy ? (
-            <div>集計中…</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 6 }}>
-              <div>総カード数：{totalCards}</div>
-              <div>所持枚数（種類）：{ownedDistinct}</div>
-              <div>
-                所持率：{pct(ownedDistinct, totalCards)}%
+  <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+    <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, overflow: 'auto' }}>
+      <div className="panel">
+        <h3 style={{ margin: '4px 0 8px' }}>全体</h3>
+        {busy ? (
+          <div>集計中…</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 6 }}>
+            <div>総カード数：{totalCards}</div>
+            <div>所持枚数（種類）：{ownedDistinct}</div>
+            <div>
+              所持率：{pct(ownedDistinct, totalCards)}%
+              <div className="progress" style={{ marginTop: 6 }}>
+                <div
+                  className="fill"
+                  style={{ width: `${pct(ownedDistinct, totalCards)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="panel">
+        <h3 style={{ margin: '4px 0 8px' }}>弾別（dan）</h3>
+        {busy ? (
+          <div>集計中…</div>
+        ) : byDan.length === 0 ? (
+          <div>データがありません。</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10, maxHeight: '400px', overflowY: 'auto' }}>
+            {byDan.map(([dan, s]) => (
+              <div key={dan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <div>
+                    <span className="badge" style={{ marginRight: 8 }}>{dan}</span>
+                    {s.owned} / {s.total}（{pct(s.owned, s.total)}%）
+                  </div>
+                </div>
                 <div className="progress" style={{ marginTop: 6 }}>
                   <div
                     className="fill"
-                    style={{ width: `${pct(ownedDistinct, totalCards)}%` }}
+                    style={{ width: `${pct(s.owned, s.total)}%` }}
                   />
                 </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        <div className="panel">
-          <h3 style={{ margin: '4px 0 8px' }}>弾別（dan）</h3>
-          {busy ? (
-            <div>集計中…</div>
-          ) : byDan.length === 0 ? (
-            <div>データがありません。</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              {byDan.map(([dan, s]) => (
-                <div key={dan}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <div>
-                      <span className="badge" style={{ marginRight: 8 }}>{dan}</span>
-                      {s.owned} / {s.total}（{pct(s.owned, s.total)}%）
-                    </div>
-                  </div>
-                  <div className="progress" style={{ marginTop: 6 }}>
-                    <div
-                      className="fill"
-                      style={{ width: `${pct(s.owned, s.total)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-    </section>
-  )
+    </div>
+  </section>
+)
 }

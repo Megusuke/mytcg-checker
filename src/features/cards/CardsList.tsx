@@ -116,11 +116,11 @@ export const CardsList: React.FC = () => {
     setOwnMap(prev => ({ ...prev, [viewer]: next }))
   }
 
-  return (
+   return (
     <div className="cards-list">
       {/* ツールバー：dan 絞り込み + 未所持のみ */}
       <div className="toolbar" style={{position:'sticky', top:0, zIndex:5, margin:'-12px -12px 12px'}}>
-        <div className="grid toolbar-grid" style={{display:'grid', gridTemplateColumns:'1fr 200px 160px', gap:12, alignItems:'center'}}>
+        <div className="grid toolbar-grid" style={{display:'grid', gridTemplateColumns:'1fr', gap:12, alignItems:'center'}}>
           <h2 style={{margin:0}}>検索</h2>
           <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
             {danOptions.map(d => <option key={d} value={d}>{d}</option>)}
@@ -136,16 +136,16 @@ export const CardsList: React.FC = () => {
         </div>
       </div>
 
-      {/* スクロール可能な結果領域（5列グリッド） */}
+      {/* スクロール可能な結果領域 */}
       <div
         className="search-scroll"
         style={{
           overflowY: 'auto',
-          maxHeight: 'calc(100vh - 220px)', // 画面下までスクロールさせる想定。必要なら微調整OK
+          maxHeight: 'calc(100vh - 220px)',
           paddingRight: 2
         }}
       >
-        <div className="cards-grid" style={{gridTemplateColumns: 'repeat(5, 1fr)'}}>
+        <div className="cards-grid" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8}}>
           {filtered.map(c => (
             <button
               key={c.cardId}
@@ -168,48 +168,7 @@ export const CardsList: React.FC = () => {
         </div>
       </div>
 
-      {/* 画像タップ時の拡大ビュー（簡易モーダル） */}
-      {viewer && (
-        <div
-          onClick={() => setViewer(null)}
-          style={{
-            position:'fixed', inset:0, background:'rgba(0,0,0,.7)',
-            display:'grid', placeItems:'center', zIndex:9999, padding:16
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background:'var(--panel)', border:'1px solid #1e293b', borderRadius:12,
-              maxWidth:'min(92vw, 900px)', width:'100%', boxShadow:'var(--shadow)', padding:12
-            }}
-          >
-            <div style={{display:'grid', gap:12}}>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                <div style={{fontWeight:700}}>{viewer}</div>
-                <button className="btn ghost" onClick={() => setViewer(null)}>閉じる</button>
-              </div>
-
-              <div>
-                <CardThumb cardId={viewer} width="100%" />
-              </div>
-
-              {/* 所持枚数カウンタ */}
-              <div style={{display:'flex', alignItems:'center', gap:8, justifyContent:'center'}}>
-                <button className="btn" onClick={dec}>−</button>
-                <input
-                  className="input input--num"
-                  type="number"
-                  value={ownCount}
-                  readOnly
-                  style={{textAlign:'center'}}
-                />
-                <button className="btn" onClick={inc}>＋</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ...existing code... */}
     </div>
   )
 }
