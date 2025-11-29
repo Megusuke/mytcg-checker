@@ -44,13 +44,16 @@ export const CardsList: React.FC = () => {
       const cs = await getAllCards()
       setCards(cs)
 
-      // 前回の絞り込みを復元（なければ最初のdan）
-      const savedDan = localStorage.getItem('search.qSet') || ''
+      // 前回の絞り込みを復元（なければ 'OP01'）
+      const savedDan = localStorage.getItem('search.qSet') // null if not set
       const allDans = Array.from(new Set(cs.map(c => (c as any).dan).filter(Boolean))).sort()
-      if (savedDan && allDans.includes(savedDan)) {
-        setQSet(savedDan)
+      if (savedDan !== null) {
+        // savedDan may be '' (ALL) or a valid dan value
+        if (savedDan === '' || allDans.includes(savedDan)) setQSet(savedDan)
+        else setQSet('OP01')
       } else {
-        setQSet(allDans[0] ?? '')
+        // no saved preference -> default to 'OP01'
+        setQSet('OP01')
       }
 
       // 所持情報をまとめて読み込み（並列）
@@ -65,20 +68,31 @@ export const CardsList: React.FC = () => {
     })()
   }, [])
 
-  // dan の候補一覧
+  // dan の候補一覧（重複除去、ヘッダ'dan'を除外、先頭に ALL）
   const danOptions = useMemo(() => {
     const s = new Set<string>()
     for (const c of cards) {
-      const d = (c as any).dan
-      if (d) s.add(String(d))
+      const raw = (c as any).dan
+      if (!raw) continue
+      const v = String(raw).trim()
+      // CSVヘッダなどで "dan" が入るケースを除外（大/小文字両対応）
+      if (v === '') continue
+      if (v.toLowerCase() === 'dan') continue
+      s.add(v)
     }
-    return Array.from(s).sort()
+    const list = Array.from(s).sort()
+    // 先頭に ALL（値は空文字 -> フィルタ無し）
+    return [''].concat(list)
   }, [cards])
 
   // 絞り込み＋dansortでソート＋「未所持のみ」
   const filtered = useMemo(() => {
     let list = cards
-    if (qSet) list = list.filter(c => String((c as any).dan) === qSet)
+    // dan で絞り込み（空文字 = ALL なので絞り込みなし）
+    if (qSet !== '') {
+      list = list.filter(c => String((c as any).dan) === qSet)
+    }
+    // 未所持のみ
     if (onlyUnowned) {
       list = list.filter(c => (ownMap[c.cardId] ?? 0) === 0)
     }
@@ -87,7 +101,7 @@ export const CardsList: React.FC = () => {
 
   // qSet / onlyUnowned を選ぶたび保存（次回起動時に復元）
   useEffect(() => {
-    if (qSet) localStorage.setItem('search.qSet', qSet)
+    localStorage.setItem('search.qSet', qSet)
   }, [qSet])
   useEffect(() => {
     localStorage.setItem('search.onlyUnowned', onlyUnowned ? '1' : '0')
@@ -116,20 +130,20 @@ export const CardsList: React.FC = () => {
     setOwnMap(prev => ({ ...prev, [viewer]: next }))
   }
 
-   return (
+  return (
     <div className="cards-list">
       {/* ツールバー：dan 絞り込み + 未所持のみ */}
-      <div className="toolbar" style={{position:'sticky', top:0, zIndex:5, margin:'-12px -12px 12px'}}>
-        <div className="grid toolbar-grid" style={{display:'grid', gridTemplateColumns:'1fr', gap:12, alignItems:'center'}}>
-          <h2 style={{margin:0}}>検索</h2>
+      <div className="toolbar" style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}>
+        <div className="grid toolbar-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}>
+          <h2 style={{ margin: 0 }}>検索</h2>
           <select className="select" value={qSet} onChange={e => setQSet(e.target.value)}>
-            {danOptions.map(d => <option key={d} value={d}>{d}</option>)}
+            {danOptions.map(d => <option key={d} value={d}>{d === '' ? 'ALL' : d}</option>)}
           </select>
-          <label style={{display:'flex', alignItems:'center', gap:8}}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
               type="checkbox"
               checked={onlyUnowned}
-              onChange={(e)=> setOnlyUnowned(e.target.checked)}
+              onChange={(e) => setOnlyUnowned(e.target.checked)}
             />
             未所持のみ
           </label>
@@ -145,25 +159,25 @@ export const CardsList: React.FC = () => {
           paddingRight: 2
         }}
       >
-        <div className="cards-grid" style={{gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8}}>
+        <div className="cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8 }}>
           {filtered.map(c => (
             <button
               key={c.cardId}
               onClick={() => openViewer(c.cardId)}
               title={c.cardId}
               style={{
-                display:'block',
-                padding:0,
-                background:'transparent',
-                border:'none',
-                cursor:'pointer'
+                display: 'block',
+                padding: 0,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer'
               }}
             >
               <CardThumb cardId={c.cardId} width="100%" />
             </button>
           ))}
           {filtered.length === 0 && (
-            <div style={{opacity:.8}}>該当カードがありません</div>
+            <div style={{ opacity: .8 }}>該当カードがありません</div>
           )}
         </div>
       </div>
