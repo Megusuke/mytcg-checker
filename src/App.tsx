@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { ImportZip } from './features/importZip/ImportZip'
-import { ZipDoctor } from './features/importZip/ZipDoctor'
 import { ImportCsv } from './features/importCsv/ImportCsv'
 import { CardsList } from './features/cards/CardsList'
 import { Stats } from './features/stats/Stats'
@@ -32,7 +31,6 @@ export default function App() {
           <section className="panel grid" style={{gridTemplateColumns:'1fr', gap:12}}>
             <div className="two-col">
               <ImportZip />
-              <ZipDoctor />
             </div>
             <ImportCsv />
             <Backup />
