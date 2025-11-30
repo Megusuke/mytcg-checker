@@ -111,36 +111,50 @@ export const Backup: React.FC = () => {
 
   // ---------- インポート（復元）処理 ----------
   async function applyImportedObject(obj: any) {
-    // 期待形: { ownership: { cardId: number, ... }, purchases: { cardId: [ {place,price}, ... ] } }
     const cards = await getAllCards()
     const validCardIds = new Set(cards.map((c) => c.cardId))
 
     // ownership の復元
-    if (obj && typeof obj.ownership === 'object') {
-      const entries = Object.entries(obj.ownership)
-      await Promise.all(
-        entries.map(async ([cardId, val]) => {
-          if (!validCardIds.has(cardId)) return
-          const count = Number(val)
-          if (!Number.isNaN(count)) {
-            try {
-              await setOwnership(cardId, count)
-            } catch {
-              // ignore per-item error
-            }
+    let ownership: Record<string, number> = {}
+    
+    if (obj && obj.ownership) {
+      // 新形式（オブジェクト）か旧形式（配列）か判定
+      if (Array.isArray(obj.ownership)) {
+        // 旧形式: [ { cardId: "...", count: number }, ... ]
+        for (const item of obj.ownership) {
+          if (item && item.cardId && typeof item.count === 'number') {
+            ownership[item.cardId] = item.count
           }
-        })
-      )
+        }
+      } else if (typeof obj.ownership === 'object') {
+        // 新形式: { cardId: count, ... }
+        ownership = obj.ownership
+      }
     }
 
-    // purchases の復元（localStorage の sales.{cardId} に保存）
+    // ownership を DB に保存
+    const entries = Object.entries(ownership)
+    await Promise.all(
+      entries.map(async ([cardId, val]) => {
+        if (!validCardIds.has(cardId)) return
+        const count = Number(val)
+        if (!Number.isNaN(count)) {
+          try {
+            await setOwnership(cardId, count)
+          } catch {
+            // ignore
+          }
+        }
+      })
+    )
+
+    // purchases の復元（新形式のみ対応）
     if (obj && typeof obj.purchases === 'object') {
       const entries = Object.entries(obj.purchases)
       for (const [cardId, arr] of entries) {
         if (!validCardIds.has(cardId)) continue
         try {
           if (Array.isArray(arr)) {
-            // 正規化: 各行を {place,price} にして保存
             const normalized = arr.map((r: any) => ({ place: String(r.place ?? ''), price: String(r.price ?? '') }))
             localStorage.setItem(salesKey(cardId), JSON.stringify(normalized))
           }
@@ -151,88 +165,58 @@ export const Backup: React.FC = () => {
     }
   }
 
-  async function importFromText(input: string) {
-    if (!input || input.trim() === '') {
-      toast.error('読み込む JSON が空です')
-      return
-    }
-    try {
-      const parsed = JSON.parse(input)
-      await applyImportedObject(parsed)
-      toast.success('インポートが完了しました')
-      // 変更を UI に反映するためイベント等で通知したい場合は再ロードするか、必要な箇所で再読込処理を行ってください
-    } catch (e) {
-      toast.error('JSON の解析に失敗しました')
-    }
-  }
-
-  async function pasteFromClipboardAndImport() {
-    try {
-      const text = await navigator.clipboard.readText()
-      await importFromText(text)
-    } catch {
-      toast.error('クリップボードからの読み取りに失敗しました')
-    }
-  }
-
-  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files && e.target.files[0]
-    if (!f) return
-    const r = new FileReader()
-    r.onload = async () => {
-      const txt = String(r.result ?? '')
-      await importFromText(txt)
-    }
-    r.readAsText(f, 'utf-8')
-    // reset input so same file can be chosen again
-    if (fileRef.current) fileRef.current.value = ''
-  }
-
   return (
-    <div style={{ display: 'grid', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={exportOwnershipCopy}>所持状況をエクスポート（コピー）</button>
-        <button onClick={exportPurchasesCopy}>購入情報をエクスポート（コピー）</button>
-        <button onClick={exportAllCopy}>両方をエクスポート（コピー）</button>
+    <div className="space-y-4 p-4">
+      <h2 className="text-xl font-bold">バックアップ & 復元</h2>
+
+      {/* エクスポート セクション */}
+      <div className="border rounded p-4 space-y-2">
+        <h3 className="font-semibold">エクスポート</h3>
+        <button
+          onClick={exportOwnershipCopy}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+        >
+          所持状況をコピー
+        </button>
+        <button
+          onClick={exportPurchasesCopy}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2"
+        >
+          購入情報をコピー
+        </button>
+        <button
+          onClick={exportAllCopy}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2"
+        >
+          すべてコピー
+        </button>
       </div>
 
-      <div style={{ fontSize: 12, opacity: 0.8 }}>
-        エクスポートは JSON 形式でクリップボードへコピーされます。以下からインポート（復元）できます。
-      </div>
-
-      <div style={{ display: 'grid', gap: 8 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={pasteFromClipboardAndImport}>クリップボードからインポート</button>
-          <input ref={fileRef} type="file" accept="application/json" onChange={onFileChange} />
-        </div>
-
-        <div style={{ display: 'grid', gap: 6 }}>
-          <textarea
-            value={textArea}
-            onChange={(e) => setTextArea(e.target.value)}
-            placeholder='ここにエクスポートした JSON を貼り付けて「貼り付けからインポート」を押してください'
-            style={{ width: '100%', minHeight: 120, padding: 8, borderRadius: 8, border: '1px solid #334155', background: 'var(--panel)' }}
-          />
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button
-              onClick={async () => {
-                await importFromText(textArea)
-              }}
-            >
-              貼り付けからインポート
-            </button>
-            <button
-              onClick={() => {
-                setTextArea('')
-              }}
-            >
-              クリア
-            </button>
-          </div>
-        </div>
+      {/* インポート セクション */}
+      <div className="border rounded p-4 space-y-2">
+        <h3 className="font-semibold">インポート</h3>
+        <textarea
+          value={textArea}
+          onChange={(e) => setTextArea(e.target.value)}
+          placeholder="バックアップのテキストをここに貼り付けてください"
+          className="w-full h-32 border rounded p-2 font-mono text-sm"
+        />
+        <button
+          onClick={async () => {
+            try {
+              const obj = JSON.parse(textArea)
+              await applyImportedObject(obj)
+              toast.success('復元しました')
+              setTextArea('')
+            } catch {
+              toast.error('無効なデータです')
+            }
+          }}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          復元する
+        </button>
       </div>
     </div>
   )
 }
-
-export default Backup
