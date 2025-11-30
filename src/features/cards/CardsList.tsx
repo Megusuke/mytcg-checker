@@ -37,7 +37,10 @@ export const CardsList: React.FC = () => {
   const [viewer, setViewer] = useState<string | null>(null) // 拡大表示中の cardId
   const [ownCount, setOwnCount] = useState<number>(0)       // 拡大中カードの所持枚数
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
-  const [danFilter, setDanFilter] = useState<string>('')
+  const [danFilter, setDanFilter] = useState<string>(() => {
+    const saved = localStorage.getItem('search.dan')
+    return saved !== null ? saved : ''
+  })
 
   // カードごとのメモ
   const [memoText, setMemoText] = useState<string>('')
@@ -52,8 +55,6 @@ export const CardsList: React.FC = () => {
       // 前回の検索条件を復元
       const savedCardId = localStorage.getItem('search.cardId') || ''
       setSearchCardId(savedCardId)
-      const savedDan = localStorage.getItem('search.dan') || ''
-      setDanFilter(savedDan)
  
       // 所持情報をまとめて読み込み（並列）
       const map: Record<string, number> = {}
@@ -97,6 +98,8 @@ export const CardsList: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('search.onlyUnowned', onlyUnowned ? '1' : '0')
   }, [onlyUnowned])
+
+  // （初期値を localStorage から取っているので復元用 useEffect は不要）
 
   // 画像クリックで拡大＆カウンタ取得
   async function openViewer(cid: string) {
@@ -154,7 +157,7 @@ export const CardsList: React.FC = () => {
             onChange={(e) => setDanFilter(e.target.value)}
             style={{ padding: '8px' }}
           >
-            <option value="">全て（danなし）</option>
+            <option value="">ALL</option>
             {danOptions.map(d => <option key={d} value={d}>{d}</option>)}
           </select>
           <input
