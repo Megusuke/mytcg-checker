@@ -37,7 +37,11 @@ export const CardsList: React.FC = () => {
   const [viewer, setViewer] = useState<string | null>(null) // 拡大表示中の cardId
   const [ownCount, setOwnCount] = useState<number>(0)       // 拡大中カードの所持枚数
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
-  const [danFilter, setDanFilter] = useState<string>('')   // dan 絞り込み（空 = 無し）
+  const [danFilter, setDanFilter] = useState<string>('')
+
+  // カードごとのメモ
+  const [memoText, setMemoText] = useState<string>('')
+  const memoKey = (cid: string) => `memo.${cid}`
 
   // 初回ロード：カード取得、前回の検索条件復元、所持状況読み込み
   useEffect(() => {
@@ -99,8 +103,16 @@ export const CardsList: React.FC = () => {
     setViewer(cid)
     const ow = await getOwnership(cid)
     setOwnCount(ow?.count ?? 0)
+    // メモ読み込み
+    const saved = localStorage.getItem(memoKey(cid)) ?? ''
+    setMemoText(saved)
   }
 
+  function saveMemo(cid: string | null) {
+    if (!cid) return
+    localStorage.setItem(memoKey(cid), memoText)
+  }
+  
   async function inc() {
     if (!viewer) return
     const next = ownCount + 1
@@ -213,26 +225,35 @@ export const CardsList: React.FC = () => {
             }}
           >
             <div style={{display:'grid', gap:12}}>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                <div style={{fontWeight:700}}>{viewer}</div>
-                <button className="btn ghost" onClick={() => setViewer(null)}>閉じる</button>
+              {/* カード画像（上）→ 情報・操作・メモ（下）に配置 */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: 'min(92vw, 320px)' }}>
+                  <CardThumb cardId={viewer} width="100%" />
+                </div>
               </div>
 
-              <div>
-                <CardThumb cardId={viewer} width="100%" />
-              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 600 }}>{viewer}</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button onClick={(e) => { e.stopPropagation(); dec() }}>-</button>
+                    <div style={{ minWidth: 36, textAlign: 'center' }}>{ownCount}</div>
+                    <button onClick={(e) => { e.stopPropagation(); inc() }}>+</button>
+                  </div>
+                </div>
 
-              {/* 所持枚数カウンタ */}
-              <div style={{display:'flex', alignItems:'center', gap:8, justifyContent:'center'}}>
-                <button className="btn" onClick={dec}>−</button>
-                <input
-                  className="input input--num"
-                  type="number"
-                  value={ownCount}
-                  readOnly
-                  style={{textAlign:'center'}}
+                <textarea
+                  value={memoText}
+                  onChange={(e) => setMemoText(e.target.value)}
+                  onBlur={() => saveMemo(viewer)}
+                  placeholder="このカードについてのメモを入力..."
+                  style={{ width: '100%', minHeight: 120, resize: 'vertical', padding: 8, borderRadius: 8, border: '1px solid #334155', background: 'var(--panel)' }}
                 />
-                <button className="btn" onClick={inc}>＋</button>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button onClick={(e) => { e.stopPropagation(); saveMemo(viewer); }}>保存</button>
+                  <button onClick={(e) => { e.stopPropagation(); localStorage.removeItem(memoKey(viewer)); setMemoText('') }}>消去</button>
+                </div>
               </div>
             </div>
           </div>
