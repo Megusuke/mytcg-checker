@@ -136,7 +136,6 @@ export const CardsList: React.FC = () => {
       {/* ツールバー：cardId 検索 + 未所持のみ */}
       <div className="toolbar" style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}>
         <div className="grid toolbar-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}>
-          <h2 style={{ margin: 0 }}>検索</h2>
           <select
             className="select"
             value={danFilter}

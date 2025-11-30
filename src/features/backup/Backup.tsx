@@ -103,14 +103,6 @@ export const Backup: React.FC = () => {
     <div className="panel" style={{ display:'grid', gap:12 }}>
       <h2 style={{ margin:'0 0 4px' }}>バックアップ / 復元（所持状況のみ）</h2>
 
-      <p style={{margin:0, fontSize:13, lineHeight:1.5, color:'var(--muted)'}}>
-        ・「エクスポート」を押すと、現在の所持枚数データ（どのカードを何枚持っているか）が
-        下のテキストエリアにJSONとして表示されます。<br/>
-        ・その文字列をメモ帳やメール等にコピーして保存してください。<br/>
-        ・復元したいときは、保存しておいたJSON文字列を貼り付けて「復元」を押します。<br/>
-        ・画像やカード一覧マスタは含みません（CSV/ZIPはこれまで通りインポートしてください）。
-      </p>
-
       <div style={{display:'flex', gap:8, flexWrap:'wrap'}}>
         <button
           className="btn"
@@ -146,10 +138,6 @@ export const Backup: React.FC = () => {
         onChange={(e)=> setTextData(e.target.value)}
       />
 
-      <div style={{fontSize:12, color:'var(--muted)'}}>
-        注意: このバックアップは所持枚数のみです。カード画像やカード名リストは含みません。
-        それらは今までどおりCSVインポート、ZIPインポートで復元してください。
-      </div>
     </div>
   )
 }

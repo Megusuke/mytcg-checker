@@ -59,7 +59,6 @@ export const Stats: React.FC = () => {
   <section style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
     <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12, overflow: 'auto' }}>
       <div className="panel">
-        <h3 style={{ margin: '4px 0 8px' }}>全体</h3>
         {busy ? (
           <div>集計中…</div>
         ) : (
@@ -80,7 +79,6 @@ export const Stats: React.FC = () => {
       </div>
 
       <div className="panel">
-        <h3 style={{ margin: '4px 0 8px' }}>弾別（dan）</h3>
         {busy ? (
           <div>集計中…</div>
         ) : byDan.length === 0 ? (

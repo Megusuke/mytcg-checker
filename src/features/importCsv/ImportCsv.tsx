@@ -96,15 +96,6 @@ export function ImportCsv() {
         disabled={busy}
         className="input"
       />
-      <small style={{ color:'#94a3b8' }}>
-        先頭行はヘッダ、UTF-8 推奨。サポート列：
-        <code>
-          cardId, dan, dansort, name, rarity, color, kind, type, cost, counter, life, power, effect, attribute, blockicon
-        </code>
-        <br/>
-        <b>dan</b> は発売弾（OP01 等）、<b>dansort</b> はその弾内の並び順（数値）。<br/>
-        旧CSVの <code>sort</code> がある場合は自動で <code>dansort</code> として扱います。
-      </small>
     </div>
   )
 }
