@@ -3,6 +3,7 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  padding-top: 60px;
 }
 
 .logo {
@@ -39,4 +40,19 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* ヘッダーを固定 */
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+/* スクロール時にヘッダーが背景に重ならないようにする */
+body {
+  margin: 0;
 }
