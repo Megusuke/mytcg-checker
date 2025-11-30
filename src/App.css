@@ -3,7 +3,7 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
-  padding-top: 60px;
+  padding-top: calc(60px + env(safe-area-inset-top));
 }
 
 .logo {
@@ -50,6 +50,12 @@ header {
   right: 0;
   width: 100%;
   z-index: 1000;
+  /* ノッチ領域を埋める */
+  padding-top: env(safe-area-inset-top);
+  /* iOS（古いブラウザ）向けフォールバック */
+  padding-top: constant(safe-area-inset-top);
+  /* ヘッダーの背景色を明示 */
+  background-color: #0b1220; /* 必要ならプロジェクトの紺色に合わせて変更 */
 }
 
 /* スクロール時にヘッダーが背景に重ならないようにする */
