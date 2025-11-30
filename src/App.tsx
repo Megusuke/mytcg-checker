@@ -7,9 +7,10 @@ import { Backup } from './features/backup/Backup'
 import { Toaster } from './components/Toaster'
 import { Tabs } from './components/Tabs'
 import { Collect } from './features/collect/Collect'
+import { Purchase } from './features/purchase/Purchase'
 
 export default function App() {
-  const [tab, setTab] = useState<'import'|'search'|'collect'|'stats'>('import')
+  const [tab, setTab] = useState<'import'|'search'|'purchase'|'collect'|'stats'>('import')
 
   return (
     <div className="app-viewport">
@@ -20,6 +21,7 @@ export default function App() {
           tabs={[
             { key: 'import',  label: 'インポート' },
             { key: 'search',  label: '検索' },
+            { key: 'purchase', label: '購入' },
             { key: 'collect', label: '収集' },
             { key: 'stats',   label: '統計' },
           ]}
@@ -40,6 +42,12 @@ export default function App() {
         {tab === 'search' && (
           <section className="panel search-surface">
             <CardsList />
+          </section>
+        )}
+
+        {tab === 'purchase' && (
+          <section className="panel search-surface">
+            <Purchase />
           </section>
         )}
 
