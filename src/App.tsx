@@ -10,7 +10,7 @@ import { Collect } from './features/collect/Collect'
 import { Purchase } from './features/purchase/Purchase'
 
 export default function App() {
-  const [tab, setTab] = useState<'import'|'search'|'purchase'|'collect'|'stats'>('import')
+  const [tab, setTab] = useState<'import'|'search'|'purchase'|'collect'|'stats'>('search')
 
   return (
     <div className="app-viewport">
@@ -19,11 +19,11 @@ export default function App() {
 
         <Tabs
           tabs={[
-            { key: 'import',  label: 'インポート' },
             { key: 'search',  label: '検索' },
             { key: 'purchase', label: '購入' },
             { key: 'collect', label: '収集' },
             { key: 'stats',   label: '統計' },
+            { key: 'import',  label: 'インポート' },
           ]}
           value={tab}
           onChange={(k)=> setTab(k as any)}

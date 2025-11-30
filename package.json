@@ -16,6 +16,7 @@
     "papaparse": "^5.5.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -34,5 +35,4 @@
     "vite": "^7.1.7",
     "vite-plugin-pwa": "^1.0.3"
   }
-
 }
