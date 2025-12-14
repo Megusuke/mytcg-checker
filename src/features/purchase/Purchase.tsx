@@ -263,7 +263,7 @@ export const Purchase: React.FC = () => {
           <div>表示 {filteredCount} / {withPriceCount}</div>
           {filteredCount > 0 && <div>最安合計 ¥{totalMinPrice.toLocaleString('ja-JP')}</div>}
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexDirection: 'column', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', gap: 12, flexDirection: 'column', alignItems: 'flex-start' }}>
           {/* 1行目：dan + 未所持のみ */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
             <select
