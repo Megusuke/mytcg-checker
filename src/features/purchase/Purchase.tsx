@@ -263,19 +263,31 @@ export const Purchase: React.FC = () => {
           <div>表示 {filteredCount} / {withPriceCount}</div>
           {filteredCount > 0 && <div>最安合計 ¥{totalMinPrice.toLocaleString('ja-JP')}</div>}
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <select
-            className="select"
-            value={danFilter}
-            onChange={(e) => setDanFilter(e.target.value)}
-            style={{ maxWidth: 160 }}
-          >
-            <option value="">ALL</option>
-            {danOptions.map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexDirection: 'column', alignItems: 'flex-start' }}>
+          {/* 1行目：dan + 未所持のみ */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
+            <select
+              className="select"
+              value={danFilter}
+              onChange={(e) => setDanFilter(e.target.value)}
+              style={{ maxWidth: 180, minWidth: 140 }}
+            >
+              <option value="">ALL</option>
+              {danOptions.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={onlyUnowned}
+                onChange={(e) => setOnlyUnowned(e.target.checked)}
+              />
+              未所持のみ
+            </label>
+          </div>
 
+          {/* 2行目：rarity チェック群 */}
           {rarityOptions.length > 0 && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {rarityOptions.map((r) => {
@@ -298,35 +310,29 @@ export const Purchase: React.FC = () => {
             </div>
           )}
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={onlyUnowned}
-              onChange={(e) => setOnlyUnowned(e.target.checked)}
-            />
-            未所持のみ
-          </label>
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="radio"
-              name="sort"
-              value="asc"
-              checked={sortOrder === 'asc'}
-              onChange={() => setSortOrder('asc')}
-            />
-            安い順
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="radio"
-              name="sort"
-              value="desc"
-              checked={sortOrder === 'desc'}
-              onChange={() => setSortOrder('desc')}
-            />
-            高い順
-          </label>
+          {/* 3行目：並び替え（横並び） */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="radio"
+                name="sort"
+                value="asc"
+                checked={sortOrder === 'asc'}
+                onChange={() => setSortOrder('asc')}
+              />
+              安い順
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="radio"
+                name="sort"
+                value="desc"
+                checked={sortOrder === 'desc'}
+                onChange={() => setSortOrder('desc')}
+              />
+              高い順
+            </label>
+          </div>
         </div>
       </div>
 
