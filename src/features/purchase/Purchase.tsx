@@ -35,6 +35,15 @@ export const Purchase: React.FC = () => {
     const saved = localStorage.getItem('purchase.dan')
     return saved !== null ? saved : ''
   })
+  const [rarityFilter, setRarityFilter] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('purchase.rarity')
+      const arr = raw ? JSON.parse(raw) : []
+      return Array.isArray(arr) ? arr.map(String) : []
+    } catch {
+      return []
+    }
+  })
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
   const [ownCount, setOwnCount] = useState<number>(0)
   const [viewer, setViewer] = useState<string | null>(null)
@@ -57,6 +66,9 @@ export const Purchase: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('purchase.dan', danFilter)
   }, [danFilter])
+  useEffect(() => {
+    localStorage.setItem('purchase.rarity', JSON.stringify(rarityFilter))
+  }, [rarityFilter])
 
   // カードごとの最安値を取得
   const getMinPrice = (cardId: string): { place: string; price: number } | null => {
@@ -91,6 +103,18 @@ export const Purchase: React.FC = () => {
     return Array.from(s).sort()
   }, [cards])
 
+  const rarityOptions = useMemo(() => {
+    const s = new Set<string>()
+    for (const c of cards) {
+      const raw = (c as any).rarity
+      if (raw === undefined || raw === null) continue
+      const v = String(raw).trim()
+      if (v === '') continue
+      s.add(v)
+    }
+    return Array.from(s).sort()
+  }, [cards])
+
   // ソート対象：販売情報がある（最安値が存在する）カードのみ
   const { sorted, withPriceCount, totalMinPrice } = useMemo(() => {
     const base =
@@ -98,7 +122,12 @@ export const Purchase: React.FC = () => {
         ? cards
         : cards.filter((c) => String((c as any).dan ?? '') === danFilter.trim())
 
-    const withPrice = base
+    const rarityFiltered =
+      rarityFilter.length === 0
+        ? base
+        : base.filter((c) => rarityFilter.includes(String((c as any).rarity ?? '')))
+
+    const withPrice = rarityFiltered
       .map((c) => {
         const min = getMinPrice(c.cardId)
         return min ? { card: c, minPrice: min } : null
@@ -121,7 +150,7 @@ export const Purchase: React.FC = () => {
       withPriceCount: withPrice.length,
       totalMinPrice: total,
     }
-  }, [cards, sortOrder, onlyUnowned, ownMap, danFilter])
+  }, [cards, sortOrder, onlyUnowned, ownMap, danFilter, rarityFilter])
 
   const filteredCount = sorted.length
 
@@ -246,6 +275,38 @@ export const Purchase: React.FC = () => {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
+
+          {rarityOptions.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {rarityOptions.map((r) => {
+                const checked = rarityFilter.includes(r)
+                return (
+                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setRarityFilter((prev) =>
+                          e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)
+                        )
+                      }}
+                    />
+                    {r}
+                  </label>
+                )
+              })}
+            </div>
+          )}
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={onlyUnowned}
+              onChange={(e) => setOnlyUnowned(e.target.checked)}
+            />
+            未所持のみ
+          </label>
+
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
               type="radio"
@@ -265,14 +326,6 @@ export const Purchase: React.FC = () => {
               onChange={() => setSortOrder('desc')}
             />
             高い順
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input
-              type="checkbox"
-              checked={onlyUnowned}
-              onChange={(e) => setOnlyUnowned(e.target.checked)}
-            />
-            未所持のみ
           </label>
         </div>
       </div>

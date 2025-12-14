@@ -41,6 +41,15 @@ export const CardsList: React.FC = () => {
     const saved = localStorage.getItem('search.dan')
     return saved !== null ? saved : ''
   })
+  const [rarityFilter, setRarityFilter] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('search.rarity')
+      const arr = raw ? JSON.parse(raw) : []
+      return Array.isArray(arr) ? arr.map(String) : []
+    } catch {
+      return []
+    }
+  })
 
   // カードごとの販売情報（複数行）
   type SaleRow = { place: string; price: string }
@@ -76,6 +85,11 @@ export const CardsList: React.FC = () => {
     if (danFilter.trim() !== '') {
       list = list.filter((c) => String((c as any).dan) === danFilter)
     }
+    // rarity で絞り込み（選択なし＝全件）
+    if (rarityFilter.length > 0) {
+      const set = new Set(rarityFilter)
+      list = list.filter((c) => set.has(String((c as any).rarity ?? '')))
+    }
     // cardId で絞り込み（部分一致、大文字小文字区別なし）
     if (searchCardId.trim() !== '') {
       const query = searchCardId.trim().toLowerCase()
@@ -86,7 +100,7 @@ export const CardsList: React.FC = () => {
       list = list.filter((c) => (ownMap[c.cardId] ?? 0) === 0)
     }
     return [...list].sort(compareDansort)
-  }, [cards, searchCardId, onlyUnowned, ownMap, danFilter])
+  }, [cards, searchCardId, onlyUnowned, ownMap, danFilter, rarityFilter])
 
   // searchCardId を保存
   useEffect(() => {
@@ -96,6 +110,9 @@ export const CardsList: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('search.dan', danFilter)
   }, [danFilter])
+  useEffect(() => {
+    localStorage.setItem('search.rarity', JSON.stringify(rarityFilter))
+  }, [rarityFilter])
   useEffect(() => {
     localStorage.setItem('search.onlyUnowned', onlyUnowned ? '1' : '0')
   }, [onlyUnowned])
@@ -166,6 +183,18 @@ export const CardsList: React.FC = () => {
       const v = String(raw).trim()
       if (v === '') continue
       if (v.toLowerCase() === 'dan') continue
+      s.add(v)
+    }
+    return Array.from(s).sort()
+  }, [cards])
+
+  const rarityOptions = useMemo(() => {
+    const s = new Set<string>()
+    for (const c of cards) {
+      const raw = (c as any).rarity
+      if (raw === undefined || raw === null) continue
+      const v = String(raw).trim()
+      if (v === '') continue
       s.add(v)
     }
     return Array.from(s).sort()
@@ -245,6 +274,34 @@ export const CardsList: React.FC = () => {
               </option>
             ))}
           </select>
+
+          {rarityOptions.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {rarityOptions.map((r) => {
+                const checked = rarityFilter.includes(r)
+                return (
+                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => {
+                        setRarityFilter((prev) =>
+                          e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)
+                        )
+                      }}
+                    />
+                    {r}
+                  </label>
+                )
+              })}
+            </div>
+          )}
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" checked={onlyUnowned} onChange={(e) => setOnlyUnowned(e.target.checked)} />
+            未所持のみ
+          </label>
+
           <input
             type="text"
             className="select"
@@ -253,10 +310,6 @@ export const CardsList: React.FC = () => {
             onChange={(e) => setSearchCardId(e.target.value)}
             style={{ padding: '8px' }}
           />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="checkbox" checked={onlyUnowned} onChange={(e) => setOnlyUnowned(e.target.checked)} />
-            未所持のみ
-          </label>
         </div>
       </div>
 
@@ -269,7 +322,15 @@ export const CardsList: React.FC = () => {
           paddingRight: 2
         }}
       >
-        <div className="cards-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 8 }}>
+        <div
+          className="cards-grid"
+          style={{
+            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+            gap: 8,
+            justifyContent: 'flex-start',
+            justifyItems: 'center'
+          }}
+        >
           {filtered.map((c) => (
             <button
               key={c.cardId}
