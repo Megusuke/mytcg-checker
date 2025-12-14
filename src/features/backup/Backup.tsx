@@ -68,15 +68,17 @@ async function gatherPurchases(cards: Card[]) {
 export const Backup: React.FC = () => {
   const [textArea, setTextArea] = useState<string>('')
   const fileRef = useRef<HTMLInputElement | null>(null)
+  const [exportText, setExportText] = useState<string>('') // 失敗時・手動コピー用に表示
 
   async function exportOwnershipCopy() {
     try {
       const cards = await getAllCards()
       const ownership = await gatherOwnership(cards)
       const text = JSON.stringify({ ownership }, null, 2)
+      setExportText(text)
       const ok = await copyToClipboard(text)
-      if (ok) toast.success('所持状況をクリップボードにコピーしました')
-      else toast.error('クリップボードへのコピーに失敗しました')
+      if (ok) toast.success('所持状況をクリップボードにコピーしました（下にも表示しています）')
+      else toast.error('クリップボードへのコピーに失敗しました。下のテキストを手動でコピーしてください。')
     } catch (e) {
       toast.error('エクスポートに失敗しました')
     }
@@ -87,9 +89,10 @@ export const Backup: React.FC = () => {
       const cards = await getAllCards()
       const purchases = await gatherPurchases(cards)
       const text = JSON.stringify({ purchases }, null, 2)
+      setExportText(text)
       const ok = await copyToClipboard(text)
-      if (ok) toast.success('購入情報をクリップボードにコピーしました')
-      else toast.error('クリップボードへのコピーに失敗しました')
+      if (ok) toast.success('購入情報をクリップボードにコピーしました（下にも表示しています）')
+      else toast.error('クリップボードへのコピーに失敗しました。下のテキストを手動でコピーしてください。')
     } catch {
       toast.error('エクスポートに失敗しました')
     }
@@ -101,9 +104,10 @@ export const Backup: React.FC = () => {
       const ownership = await gatherOwnership(cards)
       const purchases = await gatherPurchases(cards)
       const text = JSON.stringify({ ownership, purchases }, null, 2)
+      setExportText(text)
       const ok = await copyToClipboard(text)
-      if (ok) toast.success('所持状況と購入情報をクリップボードにコピーしました')
-      else toast.error('クリップボードへのコピーに失敗しました')
+      if (ok) toast.success('所持状況と購入情報をクリップボードにコピーしました（下にも表示しています）')
+      else toast.error('クリップボードへのコピーに失敗しました。下のテキストを手動でコピーしてください。')
     } catch {
       toast.error('エクスポートに失敗しました')
     }
@@ -191,6 +195,28 @@ export const Backup: React.FC = () => {
           すべてコピー
         </button>
       </div>
+
+      {/* 手動コピー用の表示エリア（iPhone PWAでのクリップボード失敗時用） */}
+      {exportText && (
+        <div className="border rounded p-4 space-y-2">
+          <div className="font-semibold">エクスポート結果（コピーに失敗した場合はここから手動コピー）</div>
+          <textarea
+            value={exportText}
+            readOnly
+            className="w-full h-40 border rounded p-2 font-mono text-sm"
+          />
+          <button
+            onClick={async () => {
+              const ok = await copyToClipboard(exportText)
+              if (ok) toast.success('クリップボードにコピーしました')
+              else toast.error('コピーに失敗しました。手動で選択してコピーしてください。')
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            もう一度コピー
+          </button>
+        </div>
+      )}
 
       {/* インポート セクション */}
       <div className="border rounded p-4 space-y-2">

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getAllCards, getOwnership, setOwnership } from '../../db'
+import { getAllCards, getAllOwnership } from '../../db'
 import type { Card } from '../../models'
 import { CardThumb } from '../../components/CardThumb'
 
@@ -26,16 +26,28 @@ type SaleRow = { place: string; price: string }
 export const Purchase: React.FC = () => {
   const [cards, setCards] = useState<Card[]>([])
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  // 検索タブ同様「未所持のみ」フィルタを保持（デフォルト ON）
+  const [onlyUnowned, setOnlyUnowned] = useState<boolean>(() => {
+    const saved = localStorage.getItem('purchase.onlyUnowned')
+    return saved === null ? true : saved === '1'
+  })
+  const [ownMap, setOwnMap] = useState<Record<string, number>>({})
   const [viewer, setViewer] = useState<string | null>(null)
   const [sales, setSales] = useState<SaleRow[]>([])
   const salesKey = (cid: string) => `sales.${cid}`
 
   useEffect(() => {
     ;(async () => {
-      const cs = await getAllCards()
+      const [cs, ownership] = await Promise.all([getAllCards(), getAllOwnership()])
       setCards(cs)
+      setOwnMap(ownership)
     })()
   }, [])
+
+  // フィルタ状態を保存
+  useEffect(() => {
+    localStorage.setItem('purchase.onlyUnowned', onlyUnowned ? '1' : '0')
+  }, [onlyUnowned])
 
   // カードごとの最安値を取得
   const getMinPrice = (cardId: string): { place: string; price: number } | null => {
@@ -65,11 +77,15 @@ export const Purchase: React.FC = () => {
       })
       .filter((x): x is { card: Card; minPrice: { place: string; price: number } } => x !== null)
 
-    return withPrice.sort((a, b) => {
+    const filtered = onlyUnowned
+      ? withPrice.filter(({ card }) => (ownMap[card.cardId] ?? 0) === 0)
+      : withPrice
+
+    return filtered.sort((a, b) => {
       const diff = a.minPrice.price - b.minPrice.price
       return sortOrder === 'asc' ? diff : -diff
     })
-  }, [cards, sortOrder])
+  }, [cards, sortOrder, onlyUnowned, ownMap])
 
   async function openViewer(cid: string) {
     setViewer(cid)
@@ -129,6 +145,14 @@ export const Purchase: React.FC = () => {
               onChange={() => setSortOrder('desc')}
             />
             高い順
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input
+              type="checkbox"
+              checked={onlyUnowned}
+              onChange={(e) => setOnlyUnowned(e.target.checked)}
+            />
+            未所持のみ
           </label>
         </div>
       </div>
