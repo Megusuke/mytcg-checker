@@ -31,6 +31,10 @@ export const Purchase: React.FC = () => {
     const saved = localStorage.getItem('purchase.onlyUnowned')
     return saved === null ? true : saved === '1'
   })
+  const [danFilter, setDanFilter] = useState<string>(() => {
+    const saved = localStorage.getItem('purchase.dan')
+    return saved !== null ? saved : ''
+  })
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
   const [ownCount, setOwnCount] = useState<number>(0)
   const [viewer, setViewer] = useState<string | null>(null)
@@ -50,6 +54,9 @@ export const Purchase: React.FC = () => {
   useEffect(() => {
     localStorage.setItem('purchase.onlyUnowned', onlyUnowned ? '1' : '0')
   }, [onlyUnowned])
+  useEffect(() => {
+    localStorage.setItem('purchase.dan', danFilter)
+  }, [danFilter])
 
   // カードごとの最安値を取得
   const getMinPrice = (cardId: string): { place: string; price: number } | null => {
@@ -70,9 +77,28 @@ export const Purchase: React.FC = () => {
     }
   }
 
+  // dan の候補
+  const danOptions = useMemo(() => {
+    const s = new Set<string>()
+    for (const c of cards) {
+      const raw = (c as any).dan
+      if (!raw) continue
+      const v = String(raw).trim()
+      if (v === '') continue
+      if (v.toLowerCase() === 'dan') continue
+      s.add(v)
+    }
+    return Array.from(s).sort()
+  }, [cards])
+
   // ソート対象：販売情報がある（最安値が存在する）カードのみ
-  const { sorted, withPriceCount } = useMemo(() => {
-    const withPrice = cards
+  const { sorted, withPriceCount, totalMinPrice } = useMemo(() => {
+    const base =
+      danFilter.trim() === ''
+        ? cards
+        : cards.filter((c) => String((c as any).dan ?? '') === danFilter.trim())
+
+    const withPrice = base
       .map((c) => {
         const min = getMinPrice(c.cardId)
         return min ? { card: c, minPrice: min } : null
@@ -83,14 +109,19 @@ export const Purchase: React.FC = () => {
       ? withPrice.filter(({ card }) => (ownMap[card.cardId] ?? 0) === 0)
       : withPrice
 
-    return {
-      sorted: filtered.sort((a, b) => {
+    const sortedList = filtered.sort((a, b) => {
         const diff = a.minPrice.price - b.minPrice.price
         return sortOrder === 'asc' ? diff : -diff
-      }),
+      })
+
+    const total = sortedList.reduce((sum, item) => sum + (Number(item.minPrice.price) || 0), 0)
+
+    return {
+      sorted: sortedList,
       withPriceCount: withPrice.length,
+      totalMinPrice: total,
     }
-  }, [cards, sortOrder, onlyUnowned, ownMap])
+  }, [cards, sortOrder, onlyUnowned, ownMap, danFilter])
 
   const filteredCount = sorted.length
 
@@ -201,8 +232,20 @@ export const Purchase: React.FC = () => {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>
           <div>表示 {filteredCount} / {withPriceCount}</div>
+          {filteredCount > 0 && <div>最安合計 ¥{totalMinPrice.toLocaleString('ja-JP')}</div>}
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select
+            className="select"
+            value={danFilter}
+            onChange={(e) => setDanFilter(e.target.value)}
+            style={{ maxWidth: 160 }}
+          >
+            <option value="">ALL</option>
+            {danOptions.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
               type="radio"
