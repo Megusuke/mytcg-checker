@@ -315,9 +315,11 @@ export const CardsList: React.FC = () => {
               border: '1px solid #1e293b',
               borderRadius: 12,
               maxWidth: 'min(92vw, 900px)',
+              maxHeight: '90vh',
               width: '100%',
               boxShadow: 'var(--shadow)',
-              padding: 12
+              padding: 12,
+              overflow: 'auto'
             }}
           >
             <div style={{ display: 'grid', gap: 12 }}>
@@ -356,13 +358,22 @@ export const CardsList: React.FC = () => {
                 <div style={{ display: 'grid', gap: 8 }}>
                   {sales.length === 0 && <div style={{ opacity: 0.8 }}>販売情報がありません。追加してください。</div>}
                   {sales.map((row, idx) => (
-                    <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 120px auto',
+                        gap: 8,
+                        alignItems: 'center',
+                        minWidth: 0
+                      }}
+                    >
                       <input
                         type="text"
                         value={row.place}
                         placeholder="販売場所"
                         onChange={(e) => updateSaleRow(idx, 'place', e.target.value)}
-                        style={{ flex: 2, padding: 8, borderRadius: 8, border: '1px solid #334155', background: 'var(--panel)' }}
+                        style={{ padding: 8, borderRadius: 8, border: '1px solid #334155', background: 'var(--panel)', minWidth: 0 }}
                         onClick={(e) => e.stopPropagation()}
                       />
                       <input
@@ -370,7 +381,7 @@ export const CardsList: React.FC = () => {
                         value={row.price}
                         placeholder="金額"
                         onChange={(e) => updateSaleRow(idx, 'price', e.target.value)}
-                        style={{ width: 120, padding: 8, borderRadius: 8, border: '1px solid #334155', background: 'var(--panel)' }}
+                        style={{ width: '100%', padding: 8, borderRadius: 8, border: '1px solid #334155', background: 'var(--panel)', minWidth: 0 }}
                         onClick={(e) => e.stopPropagation()}
                       />
                       <button
