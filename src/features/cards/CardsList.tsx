@@ -34,6 +34,7 @@ export const CardsList: React.FC = () => {
     return saved === null ? true : saved === '1'
   })
   const [viewer, setViewer] = useState<string | null>(null) // 拡大表示中の cardId
+  const [viewerIndex, setViewerIndex] = useState<number>(-1) // filtered 上のインデックス
   const [ownCount, setOwnCount] = useState<number>(0) // 拡大中カードの所持枚数
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
   const [danFilter, setDanFilter] = useState<string>(() => {
@@ -100,8 +101,13 @@ export const CardsList: React.FC = () => {
   }, [onlyUnowned])
 
   // 画像クリックで拡大＆カウンタ取得
-  async function openViewer(cid: string) {
+  async function openViewer(cid: string, idxOverride?: number) {
     setViewer(cid)
+    if (idxOverride !== undefined) setViewerIndex(idxOverride)
+    else {
+      const idx = filtered.findIndex((c) => c.cardId === cid)
+      setViewerIndex(idx)
+    }
     const ow = await getOwnership(cid)
     setOwnCount(ow?.count ?? 0)
     // 販売情報読み込み
@@ -168,6 +174,50 @@ export const CardsList: React.FC = () => {
   const totalCount = cards.length
   const filteredCount = filtered.length
 
+  // filtered が変わった際に viewer の位置を更新
+  useEffect(() => {
+    if (!viewer) {
+      setViewerIndex(-1)
+      return
+    }
+    const idx = filtered.findIndex((c) => c.cardId === viewer)
+    setViewerIndex(idx)
+  }, [filtered, viewer])
+
+  function openByIndex(nextIndex: number) {
+    if (nextIndex < 0 || nextIndex >= filtered.length) return
+    const nextCard = filtered[nextIndex]
+    if (nextCard) openViewer(nextCard.cardId, nextIndex)
+  }
+
+  // スワイプで前後カードへ
+  let touchStartX = 0
+  let touchStartY = 0
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    touchStartX = t.clientX
+    touchStartY = t.clientY
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touchStartX
+    const dy = t.clientY - touchStartY
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return
+    if (dx < 0) openByIndex(viewerIndex + 1) // 左→右スワイプで次へ
+    else openByIndex(viewerIndex - 1)        // 右→左スワイプで前へ
+  }
+
+  // キーボード左右キーで前後カードに移動
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      openByIndex(viewerIndex + 1)
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      openByIndex(viewerIndex - 1)
+    }
+  }
+
   return (
     <div className="cards-list">
       {/* ツールバー：cardId 検索 + 未所持のみ */}
@@ -223,7 +273,7 @@ export const CardsList: React.FC = () => {
           {filtered.map((c) => (
             <button
               key={c.cardId}
-              onClick={() => openViewer(c.cardId)}
+              onClick={() => openViewer(c.cardId, filtered.findIndex((x) => x.cardId === c.cardId))}
               title={c.cardId}
               style={{
                 display: 'block',
@@ -256,6 +306,10 @@ export const CardsList: React.FC = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onKeyDown={onKeyDown}
+            tabIndex={0}
             style={{
               background: 'var(--panel)',
               border: '1px solid #1e293b',

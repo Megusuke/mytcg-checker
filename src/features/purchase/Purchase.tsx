@@ -34,6 +34,7 @@ export const Purchase: React.FC = () => {
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
   const [ownCount, setOwnCount] = useState<number>(0)
   const [viewer, setViewer] = useState<string | null>(null)
+  const [viewerIndex, setViewerIndex] = useState<number>(-1) // sorted 内のインデックス
   const [sales, setSales] = useState<SaleRow[]>([])
   const salesKey = (cid: string) => `sales.${cid}`
 
@@ -93,8 +94,23 @@ export const Purchase: React.FC = () => {
 
   const filteredCount = sorted.length
 
-  async function openViewer(cid: string) {
+  // filtered が変わったら viewer の位置を更新
+  useEffect(() => {
+    if (!viewer) {
+      setViewerIndex(-1)
+      return
+    }
+    const idx = sorted.findIndex((x) => x.card.cardId === viewer)
+    setViewerIndex(idx)
+  }, [sorted, viewer])
+
+  async function openViewer(cid: string, idxOverride?: number) {
     setViewer(cid)
+    if (idxOverride !== undefined) setViewerIndex(idxOverride)
+    else {
+      const idx = sorted.findIndex((x) => x.card.cardId === cid)
+      setViewerIndex(idx)
+    }
     const raw = localStorage.getItem(salesKey(cid))
     try {
       const parsed: SaleRow[] = raw ? JSON.parse(raw) : []
@@ -140,6 +156,40 @@ export const Purchase: React.FC = () => {
     await setOwnership(viewer, next)
     setOwnCount(next)
     setOwnMap((prev) => ({ ...prev, [viewer]: next }))
+  }
+
+  function openByIndex(nextIndex: number) {
+    if (nextIndex < 0 || nextIndex >= sorted.length) return
+    const entry = sorted[nextIndex]
+    if (entry) openViewer(entry.card.cardId, nextIndex)
+  }
+
+  // スワイプで前後カードへ
+  let touchStartX = 0
+  let touchStartY = 0
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0]
+    touchStartX = t.clientX
+    touchStartY = t.clientY
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const t = e.changedTouches[0]
+    const dx = t.clientX - touchStartX
+    const dy = t.clientY - touchStartY
+    if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return
+    if (dx < 0) openByIndex(viewerIndex + 1)
+    else openByIndex(viewerIndex - 1)
+  }
+
+  // キーボード左右キーで前後カードに移動
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      openByIndex(viewerIndex + 1)
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      openByIndex(viewerIndex - 1)
+    }
   }
 
   return (
@@ -202,7 +252,7 @@ export const Purchase: React.FC = () => {
           {sorted.map(({ card, minPrice }) => (
             <div
               key={card.cardId}
-              onClick={() => openViewer(card.cardId)}
+              onClick={() => openViewer(card.cardId, sorted.findIndex((x) => x.card.cardId === card.cardId))}
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'min(120px, 25%) 1fr',
@@ -246,6 +296,10 @@ export const Purchase: React.FC = () => {
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            onTouchStart={onTouchStart}
+            onTouchEnd={onTouchEnd}
+            onKeyDown={onKeyDown}
+            tabIndex={0}
             style={{
               background: 'var(--panel)',
               border: '1px solid #1e293b',
