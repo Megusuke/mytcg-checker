@@ -15,8 +15,6 @@ export default function App() {
   return (
     <div className="app-viewport">
       <div className="container">
-        <h1>mytcg-checker</h1>
-
         <Tabs
           tabs={[
             { key: 'search',  label: '検索' },

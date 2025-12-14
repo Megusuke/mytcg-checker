@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getAllCards, getAllOwnership } from '../../db'
+import { getAllCards, getAllOwnership, getOwnership, setOwnership } from '../../db'
 import type { Card } from '../../models'
 import { CardThumb } from '../../components/CardThumb'
 
@@ -32,6 +32,7 @@ export const Purchase: React.FC = () => {
     return saved === null ? true : saved === '1'
   })
   const [ownMap, setOwnMap] = useState<Record<string, number>>({})
+  const [ownCount, setOwnCount] = useState<number>(0)
   const [viewer, setViewer] = useState<string | null>(null)
   const [sales, setSales] = useState<SaleRow[]>([])
   const salesKey = (cid: string) => `sales.${cid}`
@@ -69,7 +70,7 @@ export const Purchase: React.FC = () => {
   }
 
   // ソート対象：販売情報がある（最安値が存在する）カードのみ
-  const sorted = useMemo(() => {
+  const { sorted, withPriceCount } = useMemo(() => {
     const withPrice = cards
       .map((c) => {
         const min = getMinPrice(c.cardId)
@@ -81,11 +82,16 @@ export const Purchase: React.FC = () => {
       ? withPrice.filter(({ card }) => (ownMap[card.cardId] ?? 0) === 0)
       : withPrice
 
-    return filtered.sort((a, b) => {
-      const diff = a.minPrice.price - b.minPrice.price
-      return sortOrder === 'asc' ? diff : -diff
-    })
+    return {
+      sorted: filtered.sort((a, b) => {
+        const diff = a.minPrice.price - b.minPrice.price
+        return sortOrder === 'asc' ? diff : -diff
+      }),
+      withPriceCount: withPrice.length,
+    }
   }, [cards, sortOrder, onlyUnowned, ownMap])
+
+  const filteredCount = sorted.length
 
   async function openViewer(cid: string) {
     setViewer(cid)
@@ -96,6 +102,8 @@ export const Purchase: React.FC = () => {
     } catch {
       setSales([])
     }
+    const ow = await getOwnership(cid)
+    setOwnCount(ow?.count ?? 0)
   }
 
   function saveSales(cid: string | null, next: SaleRow[] | null = null) {
@@ -118,6 +126,22 @@ export const Purchase: React.FC = () => {
     saveSales(viewer, next)
   }
 
+  async function inc() {
+    if (!viewer) return
+    const next = ownCount + 1
+    await setOwnership(viewer, next)
+    setOwnCount(next)
+    setOwnMap((prev) => ({ ...prev, [viewer]: next }))
+  }
+
+  async function dec() {
+    if (!viewer) return
+    const next = Math.max(0, ownCount - 1)
+    await setOwnership(viewer, next)
+    setOwnCount(next)
+    setOwnMap((prev) => ({ ...prev, [viewer]: next }))
+  }
+
   return (
     <div className="purchase-list">
       {/* ツールバー：ソート */}
@@ -125,6 +149,9 @@ export const Purchase: React.FC = () => {
         className="toolbar"
         style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}
       >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>
+          <div>表示 {filteredCount} / {withPriceCount}</div>
+        </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <input
@@ -167,7 +194,11 @@ export const Purchase: React.FC = () => {
         }}
       >
         <div style={{ display: 'grid', gap: 12 }}>
-          {sorted.length === 0 && <div style={{ opacity: 0.8 }}>販売情報が登録されていません</div>}
+          {sorted.length === 0 && (
+            <div style={{ opacity: 0.8 }}>
+              {withPriceCount === 0 ? '販売情報が登録されていません' : '該当するカードがありません'}
+            </div>
+          )}
           {sorted.map(({ card, minPrice }) => (
             <div
               key={card.cardId}
@@ -233,7 +264,28 @@ export const Purchase: React.FC = () => {
               </div>
 
               <div style={{ display: 'grid', gap: 8 }}>
-                <div style={{ fontWeight: 600 }}>{viewer}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 600 }}>{viewer}</div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        dec()
+                      }}
+                    >
+                      -
+                    </button>
+                    <div style={{ minWidth: 36, textAlign: 'center' }}>{ownCount}</div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        inc()
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
 
                 {/* 販売行リスト */}
                 <div style={{ display: 'grid', gap: 8 }}>

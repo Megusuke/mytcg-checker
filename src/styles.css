@@ -83,6 +83,8 @@ h2 { font-size: 18px; margin: 16px 0 8px }
   background: #0b1223; border: 1px solid #263246; color: var(--text); outline: none;
 }
 .input:focus, .select:focus { border-color: var(--ring); box-shadow: 0 0 0 3px rgba(56,189,248,.2) }
+/* iPhoneでフォーカス時にズームしないよう、フォーム系を16px以上に固定 */
+input, select, textarea, button { font-size: 16px; }
 
 /* 数値入力を2桁幅に固定 */
 .input--num {

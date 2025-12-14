@@ -165,6 +165,9 @@ export const CardsList: React.FC = () => {
     return Array.from(s).sort()
   }, [cards])
 
+  const totalCount = cards.length
+  const filteredCount = filtered.length
+
   return (
     <div className="cards-list">
       {/* ツールバー：cardId 検索 + 未所持のみ */}
@@ -172,6 +175,9 @@ export const CardsList: React.FC = () => {
         className="toolbar"
         style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}
       >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>
+          <div>表示 {filteredCount} / {totalCount}</div>
+        </div>
         <div
           className="grid toolbar-grid"
           style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}
