@@ -325,7 +325,7 @@ export const CardsList: React.FC = () => {
         <div
           className="cards-grid"
           style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
             gap: 8,
             justifyContent: 'flex-start',
             justifyItems: 'center'
