@@ -15,18 +15,6 @@ export default function App() {
   return (
     <div className="app-viewport">
       <div className="container">
-        <Tabs
-          tabs={[
-            { key: 'search',  label: '検索' },
-            { key: 'purchase', label: '購入' },
-            { key: 'collect', label: '収集' },
-            { key: 'stats',   label: '統計' },
-            { key: 'import',  label: 'インポート' },
-          ]}
-          value={tab}
-          onChange={(k)=> setTab(k as any)}
-        />
-
         {tab === 'import' && (
           <section className="panel grid" style={{gridTemplateColumns:'1fr', gap:12}}>
             <div className="two-col">
@@ -60,6 +48,20 @@ export default function App() {
             <div className="panel"><Stats /></div>
           </section>
         )}
+
+        <div className="tabs-bottom">
+          <Tabs
+            tabs={[
+              { key: 'search',  label: '検索' },
+              { key: 'purchase', label: '購入' },
+              { key: 'collect', label: '収集' },
+              { key: 'stats',   label: '統計' },
+              { key: 'import',  label: 'インポート' },
+            ]}
+            value={tab}
+            onChange={(k)=> setTab(k as any)}
+          />
+        </div>
 
         <Toaster />
       </div>

@@ -55,6 +55,7 @@ export const CardsList: React.FC = () => {
   type SaleRow = { place: string; price: string }
   const [sales, setSales] = useState<SaleRow[]>([])
   const salesKey = (cid: string) => `sales.${cid}`
+  const [displayLimit, setDisplayLimit] = useState<number>(200)
 
   // 初回ロード：カード取得、前回の検索条件復元、所持状況読み込み
   useEffect(() => {
@@ -202,6 +203,13 @@ export const CardsList: React.FC = () => {
 
   const totalCount = cards.length
   const filteredCount = filtered.length
+  const visible = filtered.slice(0, displayLimit)
+  const visibleCount = visible.length
+
+  // フィルタ変更時は表示件数をリセット（負荷対策）
+  useEffect(() => {
+    setDisplayLimit(200)
+  }, [searchCardId, onlyUnowned, danFilter, rarityFilter])
 
   // filtered が変わった際に viewer の位置を更新
   useEffect(() => {
@@ -209,13 +217,13 @@ export const CardsList: React.FC = () => {
       setViewerIndex(-1)
       return
     }
-    const idx = filtered.findIndex((c) => c.cardId === viewer)
+    const idx = visible.findIndex((c) => c.cardId === viewer)
     setViewerIndex(idx)
-  }, [filtered, viewer])
+  }, [visible, viewer])
 
   function openByIndex(nextIndex: number) {
-    if (nextIndex < 0 || nextIndex >= filtered.length) return
-    const nextCard = filtered[nextIndex]
+    if (nextIndex < 0 || nextIndex >= visible.length) return
+    const nextCard = visible[nextIndex]
     if (nextCard) openViewer(nextCard.cardId, nextIndex)
   }
 
@@ -255,7 +263,15 @@ export const CardsList: React.FC = () => {
         style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>
-          <div>表示 {filteredCount} / {totalCount}</div>
+          <div>表示 {visibleCount} / {filteredCount}（全{totalCount}）</div>
+          {filteredCount > visibleCount && (
+            <button
+              onClick={() => setDisplayLimit((n) => Math.min(n + 200, filteredCount))}
+              style={{ padding: '4px 8px' }}
+            >
+              さらに表示
+            </button>
+          )}
         </div>
         <div
           className="grid toolbar-grid"
@@ -318,7 +334,6 @@ export const CardsList: React.FC = () => {
         className="search-scroll"
         style={{
           overflowY: 'auto',
-          maxHeight: 'calc(100vh - 220px)',
           paddingRight: 2
         }}
       >
@@ -331,10 +346,10 @@ export const CardsList: React.FC = () => {
             justifyItems: 'center'
           }}
         >
-          {filtered.map((c) => (
+          {visible.map((c) => (
             <button
               key={c.cardId}
-              onClick={() => openViewer(c.cardId, filtered.findIndex((x) => x.cardId === c.cardId))}
+              onClick={() => openViewer(c.cardId, visible.findIndex((x) => x.cardId === c.cardId))}
               title={c.cardId}
               style={{
                 display: 'block',

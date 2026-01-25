@@ -341,7 +341,6 @@ export const Purchase: React.FC = () => {
         className="purchase-scroll"
         style={{
           overflowY: 'auto',
-          maxHeight: 'calc(100vh - 220px)',
           paddingRight: 2
         }}
       >
