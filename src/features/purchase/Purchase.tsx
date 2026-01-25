@@ -23,7 +23,11 @@ function compareDansort(a: Card, b: Card): number {
 
 type SaleRow = { place: string; price: string }
 
-export const Purchase: React.FC = () => {
+type Props = {
+  filtersOpen?: boolean
+}
+
+export const Purchase: React.FC<Props> = ({ filtersOpen = true }) => {
   const [cards, setCards] = useState<Card[]>([])
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   // 検索タブ同様「未所持のみ」フィルタを保持（デフォルト ON）
@@ -255,85 +259,9 @@ export const Purchase: React.FC = () => {
   return (
     <div className="purchase-list">
       {/* ツールバー：ソート */}
-      <div
-        className="toolbar"
-        style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>
-          <div>表示 {filteredCount} / {withPriceCount}</div>
-          {filteredCount > 0 && <div>最安合計 ¥{totalMinPrice.toLocaleString('ja-JP')}</div>}
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexDirection: 'column', alignItems: 'flex-start' }}>
-          {/* 1行目：dan + 未所持のみ */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
-            <select
-              className="select"
-              value={danFilter}
-              onChange={(e) => setDanFilter(e.target.value)}
-              style={{ maxWidth: 180, minWidth: 140 }}
-            >
-              <option value="">ALL</option>
-              {danOptions.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-              <input
-                type="checkbox"
-                checked={onlyUnowned}
-                onChange={(e) => setOnlyUnowned(e.target.checked)}
-              />
-              未所持のみ
-            </label>
-          </div>
-
-          {/* 2行目：rarity チェック群 */}
-          {rarityOptions.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {rarityOptions.map((r) => {
-                const checked = rarityFilter.includes(r)
-                return (
-                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        setRarityFilter((prev) =>
-                          e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)
-                        )
-                      }}
-                    />
-                    {r}
-                  </label>
-                )
-              })}
-            </div>
-          )}
-
-          {/* 3行目：並び替え（横並び） */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="radio"
-                name="sort"
-                value="asc"
-                checked={sortOrder === 'asc'}
-                onChange={() => setSortOrder('asc')}
-              />
-              安い順
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="radio"
-                name="sort"
-                value="desc"
-                checked={sortOrder === 'desc'}
-                onChange={() => setSortOrder('desc')}
-              />
-              高い順
-            </label>
-          </div>
-        </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 8 }}>
+        <div>表示 {filteredCount} / {withPriceCount}</div>
+        {filteredCount > 0 && <div>最安合計 ¥{totalMinPrice.toLocaleString('ja-JP')}</div>}
       </div>
 
       {/* スクロール可能な結果領域 */}
@@ -380,6 +308,82 @@ export const Purchase: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {filtersOpen && (
+        <div className="toolbar filters-panel">
+          <div style={{ display: 'flex', gap: 12, flexDirection: 'column', alignItems: 'flex-start' }}>
+            {/* 1行目：dan + 未所持のみ */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
+              <select
+                className="select"
+                value={danFilter}
+                onChange={(e) => setDanFilter(e.target.value)}
+                style={{ maxWidth: 180, minWidth: 140 }}
+              >
+                <option value="">ALL</option>
+                {danOptions.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={onlyUnowned}
+                  onChange={(e) => setOnlyUnowned(e.target.checked)}
+                />
+                未所持のみ
+              </label>
+            </div>
+
+            {/* 2行目：rarity チェック群 */}
+            {rarityOptions.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {rarityOptions.map((r) => {
+                  const checked = rarityFilter.includes(r)
+                  return (
+                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setRarityFilter((prev) =>
+                            e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)
+                          )
+                        }}
+                      />
+                      {r}
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* 3行目：並び替え（横並び） */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="radio"
+                  name="sort"
+                  value="asc"
+                  checked={sortOrder === 'asc'}
+                  onChange={() => setSortOrder('asc')}
+                />
+                安い順
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="radio"
+                  name="sort"
+                  value="desc"
+                  checked={sortOrder === 'desc'}
+                  onChange={() => setSortOrder('desc')}
+                />
+                高い順
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 拡大ビュー（検索タブと同じ） */}
       {viewer && (

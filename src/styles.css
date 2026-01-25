@@ -11,6 +11,7 @@
   --ring: #38bdf8;
   --shadow: 0 6px 24px rgba(2,8,23,.24), 0 1px 2px rgba(2,8,23,.36);
   --tabs-height: 56px;
+  --filters-height: 220px;
 }
 
 /* 下地とタイポ */
@@ -120,6 +121,24 @@ h2 { font-size: 18px; margin: 16px 0 8px }
 }
 .tabs-bottom .tab:first-child { border-left: none; }
 
+/* タブ右上の絞り込みトグル */
+.filters-toggle {
+  position: absolute;
+  right: 12px;
+  top: -28px;
+  width: 38px;
+  height: 28px;
+  border-radius: 8px 8px 0 0;
+  background: var(--panel);
+  border: 1px solid #1e293b;
+  color: #cbd5e1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.filters-toggle.open { color: #fff; border-color: #38bdf8; }
+
 /* ボタン */
 .btn {
   display: inline-flex; align-items: center; gap: 8px;
@@ -180,6 +199,14 @@ input[type="number"] { -moz-appearance: textfield }
   background: var(--panel);
   -webkit-backdrop-filter: none; backdrop-filter: none;
   border-bottom: 1px solid #1e293b;
+}
+/* フィルタは下部（タブの上）に固定表示 */
+.filters-panel{
+  top: auto;
+  bottom: calc(var(--tabs-height) + 24px + env(safe-area-inset-bottom));
+  margin: 12px -12px 0;
+  border-top: 1px solid #1e293b;
+  border-bottom: none;
 }
 /* レイアウト：PC=5列 → SP=2列 */
 .toolbar-grid { grid-template-columns: 1fr repeat(4, minmax(120px, auto)); align-items: center }
@@ -291,7 +318,13 @@ body { padding-bottom: env(safe-area-inset-bottom); overscroll-behavior: none }
   min-height: 0;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: calc(var(--tabs-height) + 24px + env(safe-area-inset-bottom));
+}
+
+/* 絞り込みパネル表示時はスクロール領域の末尾を上に持ち上げる */
+.filters-open .search-scroll,
+.filters-open .purchase-scroll{
+  margin-bottom: 0;
 }
 
 .cards-page{

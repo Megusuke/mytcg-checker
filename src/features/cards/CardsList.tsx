@@ -26,7 +26,11 @@ function compareDansort(a: Card, b: Card): number {
   return a.cardId.localeCompare(b.cardId, 'ja')
 }
 
-export const CardsList: React.FC = () => {
+type Props = {
+  filtersOpen?: boolean
+}
+
+export const CardsList: React.FC<Props> = ({ filtersOpen = true }) => {
   const [cards, setCards] = useState<Card[]>([])
   const [searchCardId, setSearchCardId] = useState<string>('') // cardId で検索
   const [onlyUnowned, setOnlyUnowned] = useState<boolean>(() => {
@@ -258,75 +262,16 @@ export const CardsList: React.FC = () => {
   return (
     <div className="cards-list">
       {/* ツールバー：cardId 検索 + 未所持のみ */}
-      <div
-        className="toolbar"
-        style={{ position: 'sticky', top: 0, zIndex: 5, margin: '-12px -12px 12px' }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 4 }}>
-          <div>表示 {visibleCount} / {filteredCount}（全{totalCount}）</div>
-          {filteredCount > visibleCount && (
-            <button
-              onClick={() => setDisplayLimit((n) => Math.min(n + 200, filteredCount))}
-              style={{ padding: '4px 8px' }}
-            >
-              さらに表示
-            </button>
-          )}
-        </div>
-        <div
-          className="grid toolbar-grid"
-          style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}
-        >
-          <select
-            className="select"
-            value={danFilter}
-            onChange={(e) => setDanFilter(e.target.value)}
-            style={{ padding: '8px' }}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#cbd5e1', marginBottom: 8 }}>
+        <div>表示 {visibleCount} / {filteredCount}（全{totalCount}）</div>
+        {filteredCount > visibleCount && (
+          <button
+            onClick={() => setDisplayLimit((n) => Math.min(n + 200, filteredCount))}
+            style={{ padding: '4px 8px' }}
           >
-            <option value="">ALL</option>
-            {danOptions.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-
-          {rarityOptions.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {rarityOptions.map((r) => {
-                const checked = rarityFilter.includes(r)
-                return (
-                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => {
-                        setRarityFilter((prev) =>
-                          e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)
-                        )
-                      }}
-                    />
-                    {r}
-                  </label>
-                )
-              })}
-            </div>
-          )}
-
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input type="checkbox" checked={onlyUnowned} onChange={(e) => setOnlyUnowned(e.target.checked)} />
-            未所持のみ
-          </label>
-
-          <input
-            type="text"
-            className="select"
-            placeholder="CardID を入力..."
-            value={searchCardId}
-            onChange={(e) => setSearchCardId(e.target.value)}
-            style={{ padding: '8px' }}
-          />
-        </div>
+            さらに表示
+          </button>
+        )}
       </div>
 
       {/* スクロール可能な結果領域 */}
@@ -365,6 +310,65 @@ export const CardsList: React.FC = () => {
           {filtered.length === 0 && <div style={{ opacity: 0.8 }}>該当カードがありません</div>}
         </div>
       </div>
+
+      {filtersOpen && (
+        <div className="toolbar filters-panel">
+          <div
+            className="grid toolbar-grid"
+            style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}
+          >
+            <select
+              className="select"
+              value={danFilter}
+              onChange={(e) => setDanFilter(e.target.value)}
+              style={{ padding: '8px' }}
+            >
+              <option value="">ALL</option>
+              {danOptions.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+
+            {rarityOptions.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {rarityOptions.map((r) => {
+                  const checked = rarityFilter.includes(r)
+                  return (
+                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setRarityFilter((prev) =>
+                            e.target.checked ? [...prev, r] : prev.filter((x) => x !== r)
+                          )
+                        }}
+                      />
+                      {r}
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={onlyUnowned} onChange={(e) => setOnlyUnowned(e.target.checked)} />
+              未所持のみ
+            </label>
+
+            <input
+              type="text"
+              className="select"
+              placeholder="CardID を入力..."
+              value={searchCardId}
+              onChange={(e) => setSearchCardId(e.target.value)}
+              style={{ padding: '8px' }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 画像タップ時の拡大ビュー（簡易モーダル） */}
       {viewer && (
