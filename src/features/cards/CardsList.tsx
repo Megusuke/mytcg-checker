@@ -317,20 +317,28 @@ export const CardsList: React.FC<Props> = ({ filtersOpen = true }) => {
             className="grid toolbar-grid"
             style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12, alignItems: 'center' }}
           >
-            <select
-              className="select"
-              value={danFilter}
-              onChange={(e) => setDanFilter(e.target.value)}
-              style={{ padding: '8px' }}
-            >
-              <option value="">ALL</option>
-              {danOptions.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+            {/* 1行目：dan + 未所持のみ（横並び） */}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap' }}>
+              <select
+                className="select"
+                value={danFilter}
+                onChange={(e) => setDanFilter(e.target.value)}
+                style={{ maxWidth: 180, minWidth: 140 }}
+              >
+                <option value="">ALL</option>
+                {danOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={onlyUnowned} onChange={(e) => setOnlyUnowned(e.target.checked)} />
+                未所持のみ
+              </label>
+            </div>
 
+            {/* 2行目：rarity */}
             {rarityOptions.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {rarityOptions.map((r) => {
@@ -353,11 +361,7 @@ export const CardsList: React.FC<Props> = ({ filtersOpen = true }) => {
               </div>
             )}
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input type="checkbox" checked={onlyUnowned} onChange={(e) => setOnlyUnowned(e.target.checked)} />
-              未所持のみ
-            </label>
-
+            {/* 3行目：カードID */}
             <input
               type="text"
               className="select"
