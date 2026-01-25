@@ -10,7 +10,7 @@
   --error: #ef4444;
   --ring: #38bdf8;
   --shadow: 0 6px 24px rgba(2,8,23,.24), 0 1px 2px rgba(2,8,23,.36);
-  --tabs-height: 60px;
+  --tabs-height: 56px;
 }
 
 /* 下地とタイポ */
@@ -60,19 +60,25 @@ h2 { font-size: 18px; margin: 16px 0 8px }
 
 /* タブ */
 .tabs-bar {
-  display: flex; gap: 8px;
+  display: flex;
+  gap: 0;
   border-bottom: 1px solid #1e293b;
   margin: 0 0 12px; padding-bottom: 8px;
 }
 .tab {
-  background: transparent; color: #cbd5e1;
-  border: 1px solid #253149; border-bottom: none;
-  padding: 8px 12px; border-top-left-radius: 10px; border-top-right-radius: 10px;
+  background: transparent;
+  color: #cbd5e1;
+  border: 1px solid #253149;
+  border-bottom: none;
+  padding: 8px 12px;
+  border-radius: 0;
   cursor: pointer;
+  flex: 1 1 0;
 }
 .tab.active {
-  background: #0b1223; color: #fff; border-color: #38bdf8;
-  box-shadow: var(--shadow);
+  background: #0b1223;
+  color: #fff;
+  border-color: #38bdf8;
 }
 .tab:not(.active):hover { border-color: #334155 }
 
@@ -81,20 +87,28 @@ h2 { font-size: 18px; margin: 16px 0 8px }
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 16px;
+  bottom: 0;
   z-index: 200;
   background: var(--bg);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tabs-bottom .tabs-bar {
   margin: 0;
-  padding: 8px 12px;
+  padding: 0;
   border-bottom: none;
   border-top: 1px solid #1e293b;
   background: var(--panel);
   height: var(--tabs-height);
   align-items: center;
 }
+.tabs-bottom .tab {
+  height: 100%;
+  border-left: 1px solid #1e293b;
+  border-right: none;
+  border-top: none;
+  border-bottom: none;
+}
+.tabs-bottom .tab:first-child { border-left: none; }
 
 /* ボタン */
 .btn {
