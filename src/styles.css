@@ -87,10 +87,20 @@ h2 { font-size: 18px; margin: 16px 0 8px }
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 12px;
+  bottom: 24px;
   z-index: 200;
   background: var(--bg);
   padding-bottom: env(safe-area-inset-bottom);
+}
+/* タブを上げた分の“地”が見えないように下端を塗る */
+.tabs-bottom::after{
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * (24px + env(safe-area-inset-bottom)));
+  height: calc(24px + env(safe-area-inset-bottom));
+  background: var(--bg);
 }
 .tabs-bottom .tabs-bar {
   margin: 0;
