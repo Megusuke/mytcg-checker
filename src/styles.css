@@ -21,6 +21,16 @@ body {
   font: 14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans JP", sans-serif;
   background: var(--bg);
   color: var(--text);
+  display: block; /* index.css の center 寄せを打ち消す */
+}
+
+/* Vite 初期テンプレの #root 制約を解除 */
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  width: 100%;
 }
 
 /* コンテナ */
