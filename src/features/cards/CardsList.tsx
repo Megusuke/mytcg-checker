@@ -5,10 +5,16 @@ import { CardThumb } from '../../components/CardThumb'
 
 /**
  * 並び替え：
- * - まず dansort（数値として比較できれば数値、できなければ文字列比較）
- * - 同一 dansort のときは cardId で安定ソート
+ * - まず dan（文字列比較）
+ * - 次に dansort（数値として比較できれば数値、できなければ文字列比較）
+ * - 同一 dan/dansort のときは cardId で安定ソート
  */
 function compareDansort(a: Card, b: Card): number {
+  const ad = String((a as any).dan ?? '')
+  const bd = String((b as any).dan ?? '')
+  const d = ad.localeCompare(bd, 'ja')
+  if (d !== 0) return d
+
   const ax = (a as any).dansort ?? ''
   const bx = (b as any).dansort ?? ''
 
