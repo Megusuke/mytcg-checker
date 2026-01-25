@@ -69,11 +69,11 @@ export default function App() {
           )}
           <Tabs
             tabs={[
+              { key: 'import',  label: '移行' },
               { key: 'search',  label: '検索' },
               { key: 'purchase', label: '購入' },
               { key: 'collect', label: '収集' },
               { key: 'stats',   label: '統計' },
-            { key: 'import',  label: '移行' },
             ]}
             value={tab}
             onChange={(k)=> setTab(k as any)}
