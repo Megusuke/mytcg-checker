@@ -68,18 +68,22 @@ h2 { font-size: 18px; margin: 16px 0 8px }
 
 /* タブを画面下に固定 */
 .tabs-bottom {
-  position: sticky;
+  position: fixed;
+  left: 0;
+  right: 0;
   bottom: 0;
   z-index: 200;
   background: var(--bg);
   padding-bottom: env(safe-area-inset-bottom);
 }
 .tabs-bottom .tabs-bar {
-  margin: 12px 0 0;
+  margin: 0;
   padding: 8px 12px;
   border-bottom: none;
   border-top: 1px solid #1e293b;
   background: var(--panel);
+  height: var(--tabs-height);
+  align-items: center;
 }
 
 /* ボタン */
